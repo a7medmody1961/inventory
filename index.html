@@ -40,7 +40,7 @@
         <div class="flex justify-between items-center mb-4">
             <div>
                 <h1 class="text-2xl font-800 text-blue-400">مكتبتي السحابية</h1>
-                <p id="auth-status" class="text-[10px] text-gray-500 italic">جاري الاتصال بالسحابة...</p>
+                <p id="auth-status" class="text-[10px] text-gray-500 italic">جاري الاتصال بالسحابة الموحدة...</p>
             </div>
             <div class="flex gap-2">
                 <button onclick="toggleEditMode()" id="edit-toggle-btn" class="p-2 rounded-xl glass text-gray-400 transition-colors">
@@ -89,8 +89,8 @@
             <div class="space-y-4">
                 <input type="text" id="input-game-name" placeholder="اسم اللعبة" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
                 <input type="number" step="0.01" id="input-game-size" placeholder="المساحة (GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
-                <div class="text-[10px] text-gray-500 mr-2">مثال: 0.5 تعني 512 ميجا</div>
-                <select id="input-game-drive" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
+                <div class="text-[10px] text-gray-500 mr-2 text-right">0.8 تعني 819 ميجا</div>
+                <select id="input-game-drive" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-right">
                     <!-- Drive options -->
                 </select>
                 <div class="flex gap-2 pt-2">
@@ -122,9 +122,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Your New Firebase Config
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyAwANOKW2MMg8tTtdy1Y4_WVpYwJFcawzU",
             authDomain: "mygamelibrary-ac8ec.firebaseapp.com",
@@ -134,53 +134,74 @@
             appId: "1:573045847112:web:da2760be59dd235f5c547d"
         };
 
-        const appId = "my-game-library-main";
+        const appId = "my-shared-game-library-v3"; // معرّف ثابت لضمان المزامنة
         let db, auth, user;
         let inventory = [];
         let currentDriveName = '';
         let searchQuery = '';
         let isEditMode = false;
         let editingGameRef = null;
+        let isFirstLoad = true;
 
         const init = async () => {
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
 
+            // Rule 3: Auth before Queries
             await signInAnonymously(auth);
             onAuthStateChanged(auth, (u) => {
                 if (u) {
                     user = u;
-                    document.getElementById('auth-status').innerText = "متصل بسحابتك الخاصة ✅";
+                    document.getElementById('auth-status').innerText = "متصل بالسحابة الموحدة ✅";
                     loadData();
                 }
             });
         };
 
         const loadData = () => {
-            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'inventory', 'main');
+            // Rule 1: Use Public Path for Cross-Device Sync
+            // نستخدم مسار 'public/data' بدلاً من مسار المستخدم لضمان أن كل الأجهزة ترى نفس البيانات
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'main_inventory');
+            
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     inventory = docSnap.data().drives || [];
-                } else {
-                    // Seed with your OLD data
-                    inventory = [
-                        { name: 'Toshiba', total: '1TB', free: '20GB', games: [ { name: 'Call of Duty Black Ops 3', size: 70 }, { name: 'Crash™ Team Racing', size: 20 }, { name: 'eFootball 26', size: 81 }, { name: 'eFootball 26 Egyptian', size: 111 }, { name: 'FC25', size: 45 }, { name: 'FC26', size: 75 }, { name: 'GOW Regnarok', size: 115 }, { name: 'GTA V', size: 69 }, { name: 'Mario Mania', size: 1 }, { name: 'Mortal Kombat 11', size: 70 }, { name: 'Need for Speed Heat', size: 32 }, { name: 'Pes 18', size: 20 }, { name: 'Pes 19', size: 23 }, { name: 'Pes 21', size: 37 }, { name: 'Spider-Man Miles Morales', size: 51 }, { name: 'WWE 2K25', size: 89 } ] },
-                        { name: 'HGST T', total: '1TB', free: '0GB', games: [ { name: "Assassin's Creed III Remastered", size: 40 }, { name: "Assassin's Creed IV Black Flag", size: 25 }, { name: "Assassin's Creed Mirage", size: 27 }, { name: "Assassin's Creed Odyssey", size: 67 }, { name: "Assassin's Creed Origins", size: 48 }, { name: "Assassin's Creed Syndicate", size: 38 }, { name: "Assassin's Creed The Ezio Collection", size: 38 }, { name: "Assassin's Creed Unity", size: 38 }, { name: "Assassin's Creed Valhalla Ragnarok", size: 110 }, { name: 'AWAY OUT', size: 17 }, { name: 'Cars 3 Driven to Win', size: 7 }, { name: 'Dead Island 2', size: 20 }, { name: 'DIRT 5', size: 45 }, { name: 'Guns Gore and Cannoli', size: 2 }, { name: 'Human Fall Flat', size: 3 }, { name: 'LEGO Star Wars The Skywalker Saga', size: 36 }, { name: 'Prince Of Persia The Lost Crown', size: 14 }, { name: 'Red Dead Redemption 1', size: 10 }, { name: 'Red Dead Redemption 2', size: 105 }, { name: 'STAR WARS Battlefront II', size: 83 }, { name: 'STAR WARS Jedi Fallen Order', size: 57 }, { name: 'The Last of Us Remastered', size: 50 }, { name: 'The Last of Us 2', size: 91 } ] },
-                        { name: 'Seagate', total: '1TB', free: '1GB', games: [ { name: 'A Plague Tale Innocence', size: 38 }, { name: 'Alan Wake Remastered', size: 28 }, { name: 'Back 4 Blood', size: 49 }, { name: 'Bloodborne', size: 30 }, { name: 'Bus Simulator 21', size: 6 }, { name: 'CAPTAIN TSUBASA', size: 25 }, { name: 'Chef Life A Restaurant Simulator', size: 4 }, { name: 'Cyberpunk 2077', size: 105 }, { name: 'DARK SOULS™ III', size: 18 }, { name: 'Devil May Cry 5', size: 40 }, { name: 'Dying Light The Following Enhanced Edition', size: 20 }, { name: 'Dying Light 2 Stay Human', size: 60 }, { name: 'Fallout 4', size: 30 }, { name: 'Green Hell', size: 6 }, { name: 'Kena Bridge of Spirits Celebration', size: 9 }, { name: "Marvel's Avengers", size: 110 }, { name: 'Max The Curse of Brotherhood', size: 3 }, { name: 'Metro Exodus', size: 63 }, { name: 'Miraculous.Rise.of.the.Sphinx', size: 5 }, { name: 'MY LITTLE PONY', size: 3 }, { name: 'Rayman Legends', size: 8 }, { name: 'Real Farm', size: 2 }, { name: 'Sackboy A Big Adventure', size: 35 }, { name: 'Sherlock Holmes The Devil\'s Daughter', size: 15 }, { name: 'SIFU', size: 18 }, { name: 'Sleeping Dogs Definitive Edition', size: 16 }, { name: 'Sniper Elite 4', size: 38 }, { name: 'Song Of Horror', size: 15 }, { name: 'Stray', size: 13 }, { name: 'TEKEEN 7', size: 49 }, { name: 'The Callisto Protocol', size: 59 }, { name: 'The Evil Within 1', size: 35 }, { name: 'The Smurfs 2 The Prisoner of the Green Stone', size: 8 }, { name: 'The Walking Dead The Final Season', size: 11 } ] },
-                        { name: '2TB', total: '2TB', free: '0.8GB', games: [ { name: 'BATMAN ARKHAM KNIGHT', size: 51.1 }, { name: 'Call of Duty Black Ops 6', size: 57.3 }, { name: 'Call Of Duty MW 2-3', size: 185 }, { name: 'Elden Ring Shadow of the Erdtree', size: 53.5 }, { name: 'Ghost of Tsushima Directors Cut', size: 45.3 }, { name: 'Hogwarts Legacy', size: 65.5 }, { name: "Marvel's Spider-Man", size: 69.4 }, { name: 'Resident Evil 4', size: 39.3 }, { name: 'Resident Evil 8 Village', size: 34.2 } ] }
-                    ];
-                    saveToCloud();
+                    isFirstLoad = false;
+                    if (!currentDriveName && inventory.length > 0) currentDriveName = inventory[0].name;
+                    renderUI();
+                } else if (isFirstLoad) {
+                    // إذا لم تكن هناك بيانات نهائياً في السحابة، نرفع البيانات الأساسية لأول مرة فقط
+                    console.log("No cloud data found. Seeding initial data...");
+                    seedInitialData();
                 }
-                if (!currentDriveName && inventory.length > 0) currentDriveName = inventory[0].name;
-                renderUI();
-            }, (err) => console.error(err));
+            }, (err) => {
+                console.error("Firestore Error:", err);
+                document.getElementById('auth-status').innerText = "خطأ في الاتصال بالسحابة ❌";
+            });
+        };
+
+        const seedInitialData = async () => {
+            inventory = [
+                { name: 'Toshiba', total: '1TB', free: '20GB', games: [ { name: 'Call of Duty Black Ops 3', size: 70 }, { name: 'Crash™ Team Racing', size: 20 }, { name: 'eFootball 26', size: 81 }, { name: 'eFootball 26 Egyptian', size: 111 }, { name: 'FC25', size: 45 }, { name: 'FC26', size: 75 }, { name: 'GOW Regnarok', size: 115 }, { name: 'GTA V', size: 69 }, { name: 'Mario Mania', size: 1 }, { name: 'Mortal Kombat 11', size: 70 }, { name: 'Need for Speed Heat', size: 32 }, { name: 'Pes 18', size: 20 }, { name: 'Pes 19', size: 23 }, { name: 'Pes 21', size: 37 }, { name: 'Spider-Man Miles Morales', size: 51 }, { name: 'WWE 2K25', size: 89 } ] },
+                { name: 'HGST T', total: '1TB', free: '0GB', games: [ { name: "Assassin's Creed III Remastered", size: 40 }, { name: "Assassin's Creed IV Black Flag", size: 25 }, { name: "Assassin's Creed Mirage", size: 27 }, { name: "Assassin's Creed Odyssey", size: 67 }, { name: "Assassin's Creed Origins", size: 48 }, { name: "Assassin's Creed Syndicate", size: 38 }, { name: "Assassin's Creed The Ezio Collection", size: 38 }, { name: "Assassin's Creed Unity", size: 38 }, { name: "Assassin's Creed Valhalla Ragnarok", size: 110 }, { name: 'AWAY OUT', size: 17 }, { name: 'Cars 3 Driven to Win', size: 7 }, { name: 'Dead Island 2', size: 20 }, { name: 'DIRT 5', size: 45 }, { name: 'Guns Gore and Cannoli', size: 2 }, { name: 'Human Fall Flat', size: 3 }, { name: 'LEGO Star Wars The Skywalker Saga', size: 36 }, { name: 'Prince Of Persia The Lost Crown', size: 14 }, { name: 'Red Dead Redemption 1', size: 10 }, { name: 'Red Dead Redemption 2', size: 105 }, { name: 'STAR WARS Battlefront II', size: 83 }, { name: 'STAR WARS Jedi Fallen Order', size: 57 }, { name: 'The Last of Us Remastered', size: 50 }, { name: 'The Last of Us 2', size: 91 } ] },
+                { name: 'Seagate', total: '1TB', free: '1GB', games: [ { name: 'A Plague Tale Innocence', size: 38 }, { name: 'Alan Wake Remastered', size: 28 }, { name: 'Back 4 Blood', size: 49 }, { name: 'Bloodborne', size: 30 }, { name: 'Bus Simulator 21', size: 6 }, { name: 'CAPTAIN TSUBASA', size: 25 }, { name: 'Chef Life A Restaurant Simulator', size: 4 }, { name: 'Cyberpunk 2077', size: 105 }, { name: 'DARK SOULS™ III', size: 18 }, { name: 'Devil May Cry 5', size: 40 }, { name: 'Dying Light The Following Enhanced Edition', size: 20 }, { name: 'Dying Light 2 Stay Human', size: 60 }, { name: 'Fallout 4', size: 30 }, { name: 'Green Hell', size: 6 }, { name: 'Kena Bridge of Spirits Celebration', size: 9 }, { name: "Marvel's Avengers", size: 110 }, { name: 'Max The Curse of Brotherhood', size: 3 }, { name: 'Metro Exodus', size: 63 }, { name: 'Miraculous.Rise.of.the.Sphinx', size: 5 }, { name: 'MY LITTLE PONY', size: 3 }, { name: 'Rayman Legends', size: 8 }, { name: 'Real Farm', size: 2 }, { name: 'Sackboy A Big Adventure', size: 35 }, { name: 'Sherlock Holmes The Devil\'s Daughter', size: 15 }, { name: 'SIFU', size: 18 }, { name: 'Sleeping Dogs Definitive Edition', size: 16 }, { name: 'Sniper Elite 4', size: 38 }, { name: 'Song Of Horror', size: 15 }, { name: 'Stray', size: 13 }, { name: 'TEKEEN 7', size: 49 }, { name: 'The Callisto Protocol', size: 59 }, { name: 'The Evil Within 1', size: 35 }, { name: 'The Smurfs 2 The Prisoner of the Green Stone', size: 8 }, { name: 'The Walking Dead The Final Season', size: 11 } ] },
+                { name: '2TB', total: '2TB', free: '0.8GB', games: [ { name: 'BATMAN ARKHAM KNIGHT', size: 51.1 }, { name: 'Call of Duty Black Ops 6', size: 57.3 }, { name: 'Call Of Duty MW 2-3', size: 185 }, { name: 'Elden Ring Shadow of the Erdtree', size: 53.5 }, { name: 'Ghost of Tsushima Directors Cut', size: 45.3 }, { name: 'Hogwarts Legacy', size: 65.5 }, { name: "Marvel's Spider-Man", size: 69.4 }, { name: 'Resident Evil 4', size: 39.3 }, { name: 'Resident Evil 8 Village', size: 34.2 } ] }
+            ];
+            await saveToCloud();
+            isFirstLoad = false;
+            renderUI();
         };
 
         const saveToCloud = async () => {
             if (!user) return;
-            const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'inventory', 'main');
-            await setDoc(docRef, { drives: inventory });
+            // نستخدم نفس المسار الموحد للحفظ لضمان المزامنة
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'main_inventory');
+            try {
+                await setDoc(docRef, { drives: inventory });
+            } catch (e) {
+                console.error("Save Error:", e);
+            }
         };
 
         const formatSize = (size) => {
@@ -204,12 +225,12 @@
             if (currentDrive) {
                 infoBox.innerHTML = `
                     <div class="glass p-4 rounded-2xl border-l-4 border-blue-500 flex justify-between items-end">
-                        <div>
+                        <div class="text-right">
                             <p class="text-[10px] text-gray-400">هارد ${currentDrive.name}</p>
                             <h3 class="text-lg font-bold">الألعاب: ${currentDrive.games.length}</h3>
                         </div>
-                        <div class="text-right">
-                            <p class="text-[10px] text-gray-400">المساحة: ${currentDrive.free} متاح من ${currentDrive.total}</p>
+                        <div class="text-left">
+                            <p class="text-[10px] text-gray-400">متاح ${currentDrive.free} من ${currentDrive.total}</p>
                             ${isEditMode ? `<button onclick="openDriveModal(true)" class="text-blue-400 text-xs font-bold mt-1 underline">تعديل الهارد</button>` : ''}
                         </div>
                     </div>
@@ -232,7 +253,7 @@
 
             listContainer.innerHTML = gamesToShow.map(g => `
                 <div class="glass p-4 rounded-2xl flex justify-between items-center animate-pop">
-                    <div>
+                    <div class="text-right">
                         <h4 class="font-bold text-white text-sm">${g.name}</h4>
                         ${searchQuery ? `<span class="text-[9px] text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-md mt-1 inline-block">${g.driveName}</span>` : ''}
                     </div>

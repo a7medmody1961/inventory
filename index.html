@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Game Library Cloud | مستودع الألعاب</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- سطر لمنع خطأ الـ favicon -->
+    <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <meta name="theme-color" content="#0f172a">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -41,7 +41,7 @@
         <div class="flex justify-between items-center mb-4">
             <div>
                 <h1 class="text-2xl font-800 text-blue-400">مكتبتي السحابية</h1>
-                <p id="auth-status" class="text-[10px] text-gray-500 italic">جاري الاتصال بالسحابة الموحدة...</p>
+                <p id="auth-status" class="text-[10px] text-gray-500 italic">جاري الاتصال بالسحابة...</p>
             </div>
             <div class="flex gap-2">
                 <button onclick="toggleEditMode()" id="edit-toggle-btn" class="p-2 rounded-xl glass text-gray-400 transition-colors">
@@ -50,11 +50,24 @@
             </div>
         </div>
 
-        <!-- Global Search -->
-        <div class="relative mb-4">
-            <input type="text" id="global-search" placeholder="ابحث في كل الهاردات عن لعبة..." 
-                   class="w-full glass py-4 pr-12 pl-4 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 transition-all">
-            <i data-lucide="search" class="absolute right-4 top-4 text-gray-500 w-5 h-5"></i>
+        <!-- Global Search & Sorting -->
+        <div class="flex gap-2 mb-4">
+            <div class="relative flex-1">
+                <input type="text" id="global-search" placeholder="ابحث عن لعبة..." 
+                       class="w-full glass py-4 pr-12 pl-4 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 transition-all">
+                <i data-lucide="search" class="absolute right-4 top-4 text-gray-500 w-5 h-5"></i>
+            </div>
+            <div class="relative">
+                <select id="sort-selector" onchange="changeSort(this.value)" 
+                        class="h-full glass px-4 rounded-2xl text-xs font-bold text-blue-400 appearance-none bg-transparent">
+                    <option value="alpha" selected>أبجدي (A-Z)</option>
+                    <option value="size-asc">المساحة (أقل)</option>
+                    <option value="size-desc">المساحة (أكبر)</option>
+                </select>
+                <div class="absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
+                    <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                </div>
+            </div>
         </div>
 
         <!-- Drives Tabs -->
@@ -83,16 +96,15 @@
         </button>
     </div>
 
-    <!-- Game Modal (Add/Edit) -->
+    <!-- Modals (Add/Edit Game) -->
     <div id="game-modal" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
         <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop text-right" dir="rtl">
             <h2 id="game-modal-title" class="text-xl font-bold mb-4 text-white">إضافة/تعديل لعبة</h2>
             <div class="space-y-4">
                 <input type="text" id="input-game-name" placeholder="اسم اللعبة" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
                 <input type="number" step="0.01" id="input-game-size" placeholder="المساحة (GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
-                <div class="text-[10px] text-gray-500 mr-2">مثال: 0.8 تعني 819 ميجا</div>
                 <select id="input-game-drive" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
-                    <!-- Drive options -->
+                    <!-- Options -->
                 </select>
                 <div class="flex gap-2 pt-2">
                     <button onclick="saveGame()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold text-white">حفظ</button>
@@ -108,8 +120,8 @@
             <h2 id="drive-modal-title" class="text-xl font-bold mb-4 text-white">إعدادات الهارد</h2>
             <div class="space-y-4">
                 <input type="text" id="input-drive-name" placeholder="اسم الهارد" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
-                <input type="text" id="input-drive-total" placeholder="المساحة الكلية (مثل: 2TB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
-                <input type="text" id="input-drive-free" placeholder="المساحة المتبقية (مثل: 50GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
+                <input type="text" id="input-drive-total" placeholder="المساحة الكلية" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
+                <input type="text" id="input-drive-free" placeholder="المساحة المتبقية" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
                 <div class="flex gap-2 pt-2">
                     <button onclick="saveDrive()" class="flex-1 bg-indigo-600 py-3 rounded-xl font-bold text-white">حفظ</button>
                     <button id="delete-drive-btn" onclick="deleteCurrentDrive()" class="flex-1 bg-red-900/50 text-red-400 py-3 rounded-xl font-bold hidden">حذف</button>
@@ -119,13 +131,11 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Your Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyAwANOKW2MMg8tTtdy1Y4_WVpYwJFcawzU",
             authDomain: "mygamelibrary-ac8ec.firebaseapp.com",
@@ -140,34 +150,27 @@
         let inventory = [];
         let currentDriveName = '';
         let searchQuery = '';
+        let currentSort = 'alpha'; // افتراضي أبجدي
         let isEditMode = false;
         let editingGameRef = null;
         let isFirstLoad = true;
 
         const init = async () => {
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                await signInAnonymously(auth);
-                onAuthStateChanged(auth, (u) => {
-                    if (u) {
-                        user = u;
-                        document.getElementById('auth-status').innerText = "متصل بالسحابة الموحدة ✅";
-                        loadData();
-                    }
-                });
-            } catch (e) {
-                console.error("Init Error:", e);
-                document.getElementById('auth-status').innerText = "خطأ في التهيئة ❌";
-            }
+            const app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            await signInAnonymously(auth);
+            onAuthStateChanged(auth, (u) => {
+                if (u) {
+                    user = u;
+                    document.getElementById('auth-status').innerText = "متصل بالسحابة ✅";
+                    loadData();
+                }
+            });
         };
 
         const loadData = () => {
-            // تصحيح المسار ليكون مكوّناً من 6 أجزاء (عدد زوجي) لضمان عمل doc() بشكل صحيح
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', 'main');
-            
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     inventory = docSnap.data().drives || [];
@@ -175,12 +178,8 @@
                     if (!currentDriveName && inventory.length > 0) currentDriveName = inventory[0].name;
                     renderUI();
                 } else if (isFirstLoad) {
-                    console.log("No cloud data found. Seeding initial data...");
                     seedInitialData();
                 }
-            }, (err) => {
-                console.error("Firestore Error:", err);
-                document.getElementById('auth-status').innerText = "خطأ في الاتصال بالسحابة ❌";
             });
         };
 
@@ -199,16 +198,17 @@
         const saveToCloud = async () => {
             if (!user) return;
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', 'main');
-            try {
-                await setDoc(docRef, { drives: inventory });
-            } catch (e) {
-                console.error("Save Error:", e);
-            }
+            await setDoc(docRef, { drives: inventory });
         };
 
         const formatSize = (size) => {
             if (size < 1) return `${(size * 1024).toFixed(0)} MB`;
             return `${size} GB`;
+        };
+
+        window.changeSort = (val) => {
+            currentSort = val;
+            renderUI();
         };
 
         window.renderUI = () => {
@@ -253,6 +253,18 @@
                 });
             });
 
+            // تطبيق الفرز (Sorting)
+            gamesToShow.sort((a, b) => {
+                if (currentSort === 'alpha') {
+                    return a.name.localeCompare(b.name);
+                } else if (currentSort === 'size-asc') {
+                    return a.size - b.size;
+                } else if (currentSort === 'size-desc') {
+                    return b.size - a.size;
+                }
+                return 0;
+            });
+
             listContainer.innerHTML = gamesToShow.map(g => `
                 <div class="glass p-4 rounded-2xl flex justify-between items-center animate-pop">
                     <div class="text-right">
@@ -276,7 +288,6 @@
         };
 
         window.setDrive = (name) => { currentDriveName = name; renderUI(); };
-
         window.toggleEditMode = () => {
             isEditMode = !isEditMode;
             document.getElementById('edit-toggle-btn').classList.toggle('bg-blue-600');
@@ -320,13 +331,10 @@
             const name = document.getElementById('input-game-name').value;
             const size = parseFloat(document.getElementById('input-game-size').value);
             const targetDriveName = document.getElementById('input-game-drive').value;
-
             if (!name || isNaN(size)) return;
             if (editingGameRef) inventory[editingGameRef.dIdx].games.splice(editingGameRef.gIdx, 1);
-            
             const dIdx = inventory.findIndex(d => d.name === targetDriveName);
             inventory[dIdx].games.push({ name, size });
-
             await saveToCloud();
             closeModals();
         };
@@ -354,7 +362,6 @@
             const total = document.getElementById('input-drive-total').value;
             const free = document.getElementById('input-drive-free').value;
             if (!name) return;
-
             const idx = inventory.findIndex(d => d.name === currentDriveName);
             if (idx > -1 && document.getElementById('drive-modal-title').innerText === "تعديل الهارد") {
                 inventory[idx].name = name;
@@ -370,7 +377,7 @@
         };
 
         window.deleteCurrentDrive = async () => {
-            if (confirm('حذف الهارد وكل اللي فيه؟')) {
+            if (confirm('حذف الهارد؟')) {
                 inventory = inventory.filter(d => d.name !== currentDriveName);
                 currentDriveName = inventory.length > 0 ? inventory[0].name : '';
                 await saveToCloud();

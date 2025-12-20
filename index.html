@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Game Library Cloud | مستودع الألعاب</title>
     <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:;base64,iVBORw0KGgo="> <!-- سطر لمنع خطأ الـ favicon -->
     <meta name="theme-color" content="#0f172a">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -84,17 +85,17 @@
 
     <!-- Game Modal (Add/Edit) -->
     <div id="game-modal" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
-        <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop">
-            <h2 id="game-modal-title" class="text-xl font-bold mb-4">إضافة/تعديل لعبة</h2>
+        <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop text-right" dir="rtl">
+            <h2 id="game-modal-title" class="text-xl font-bold mb-4 text-white">إضافة/تعديل لعبة</h2>
             <div class="space-y-4">
-                <input type="text" id="input-game-name" placeholder="اسم اللعبة" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
-                <input type="number" step="0.01" id="input-game-size" placeholder="المساحة (GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
-                <div class="text-[10px] text-gray-500 mr-2 text-right">0.8 تعني 819 ميجا</div>
-                <select id="input-game-drive" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-right">
+                <input type="text" id="input-game-name" placeholder="اسم اللعبة" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
+                <input type="number" step="0.01" id="input-game-size" placeholder="المساحة (GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
+                <div class="text-[10px] text-gray-500 mr-2">مثال: 0.8 تعني 819 ميجا</div>
+                <select id="input-game-drive" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
                     <!-- Drive options -->
                 </select>
                 <div class="flex gap-2 pt-2">
-                    <button onclick="saveGame()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold">حفظ</button>
+                    <button onclick="saveGame()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold text-white">حفظ</button>
                     <button onclick="closeModals()" class="flex-1 bg-slate-700 py-3 rounded-xl font-bold text-gray-300">إلغاء</button>
                 </div>
             </div>
@@ -103,14 +104,14 @@
 
     <!-- Drive Modal (Add/Edit) -->
     <div id="drive-modal" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
-        <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop">
-            <h2 id="drive-modal-title" class="text-xl font-bold mb-4">إعدادات الهارد</h2>
+        <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop text-right" dir="rtl">
+            <h2 id="drive-modal-title" class="text-xl font-bold mb-4 text-white">إعدادات الهارد</h2>
             <div class="space-y-4">
-                <input type="text" id="input-drive-name" placeholder="اسم الهارد" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
-                <input type="text" id="input-drive-total" placeholder="المساحة الكلية (مثل: 2TB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
-                <input type="text" id="input-drive-free" placeholder="المساحة المتبقية (مثل: 50GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
+                <input type="text" id="input-drive-name" placeholder="اسم الهارد" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
+                <input type="text" id="input-drive-total" placeholder="المساحة الكلية (مثل: 2TB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
+                <input type="text" id="input-drive-free" placeholder="المساحة المتبقية (مثل: 50GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
                 <div class="flex gap-2 pt-2">
-                    <button onclick="saveDrive()" class="flex-1 bg-indigo-600 py-3 rounded-xl font-bold">حفظ</button>
+                    <button onclick="saveDrive()" class="flex-1 bg-indigo-600 py-3 rounded-xl font-bold text-white">حفظ</button>
                     <button id="delete-drive-btn" onclick="deleteCurrentDrive()" class="flex-1 bg-red-900/50 text-red-400 py-3 rounded-xl font-bold hidden">حذف</button>
                     <button onclick="closeModals()" class="flex-1 bg-slate-700 py-3 rounded-xl font-bold text-gray-300">إلغاء</button>
                 </div>
@@ -122,9 +123,9 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Firebase Config
+        // Your Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyAwANOKW2MMg8tTtdy1Y4_WVpYwJFcawzU",
             authDomain: "mygamelibrary-ac8ec.firebaseapp.com",
@@ -134,7 +135,7 @@
             appId: "1:573045847112:web:da2760be59dd235f5c547d"
         };
 
-        const appId = "my-shared-game-library-v3"; // معرّف ثابت لضمان المزامنة
+        const appId = "my-shared-game-library-v3";
         let db, auth, user;
         let inventory = [];
         let currentDriveName = '';
@@ -144,25 +145,28 @@
         let isFirstLoad = true;
 
         const init = async () => {
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
 
-            // Rule 3: Auth before Queries
-            await signInAnonymously(auth);
-            onAuthStateChanged(auth, (u) => {
-                if (u) {
-                    user = u;
-                    document.getElementById('auth-status').innerText = "متصل بالسحابة الموحدة ✅";
-                    loadData();
-                }
-            });
+                await signInAnonymously(auth);
+                onAuthStateChanged(auth, (u) => {
+                    if (u) {
+                        user = u;
+                        document.getElementById('auth-status').innerText = "متصل بالسحابة الموحدة ✅";
+                        loadData();
+                    }
+                });
+            } catch (e) {
+                console.error("Init Error:", e);
+                document.getElementById('auth-status').innerText = "خطأ في التهيئة ❌";
+            }
         };
 
         const loadData = () => {
-            // Rule 1: Use Public Path for Cross-Device Sync
-            // نستخدم مسار 'public/data' بدلاً من مسار المستخدم لضمان أن كل الأجهزة ترى نفس البيانات
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'main_inventory');
+            // تصحيح المسار ليكون مكوّناً من 6 أجزاء (عدد زوجي) لضمان عمل doc() بشكل صحيح
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', 'main');
             
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -171,7 +175,6 @@
                     if (!currentDriveName && inventory.length > 0) currentDriveName = inventory[0].name;
                     renderUI();
                 } else if (isFirstLoad) {
-                    // إذا لم تكن هناك بيانات نهائياً في السحابة، نرفع البيانات الأساسية لأول مرة فقط
                     console.log("No cloud data found. Seeding initial data...");
                     seedInitialData();
                 }
@@ -195,8 +198,7 @@
 
         const saveToCloud = async () => {
             if (!user) return;
-            // نستخدم نفس المسار الموحد للحفظ لضمان المزامنة
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'main_inventory');
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', 'main');
             try {
                 await setDoc(docRef, { drives: inventory });
             } catch (e) {

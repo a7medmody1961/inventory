@@ -27,9 +27,10 @@
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
         }
         .safe-area-pb { padding-bottom: calc(env(safe-area-inset-bottom) + 5rem); }
-        input:focus { outline: none; border-color: #3b82f6; }
+        input:focus, select:focus { outline: none; border-color: #3b82f6; }
         .animate-pop { animation: pop 0.2s ease-out; }
         @keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
     </style>
 </head>
 <body class="safe-area-pb">
@@ -41,14 +42,16 @@
                 <h1 class="text-2xl font-800 text-blue-400">مكتبتي السحابية</h1>
                 <p id="auth-status" class="text-[10px] text-gray-500 italic">جاري الاتصال بالسحابة...</p>
             </div>
-            <button onclick="toggleEditMode()" id="edit-toggle-btn" class="p-2 rounded-xl glass text-gray-400">
-                <i data-lucide="settings" class="w-5 h-5"></i>
-            </button>
+            <div class="flex gap-2">
+                <button onclick="toggleEditMode()" id="edit-toggle-btn" class="p-2 rounded-xl glass text-gray-400 transition-colors">
+                    <i data-lucide="settings" class="w-5 h-5"></i>
+                </button>
+            </div>
         </div>
 
         <!-- Global Search -->
         <div class="relative mb-4">
-            <input type="text" id="global-search" placeholder="ابحث في كل الهاردات..." 
+            <input type="text" id="global-search" placeholder="ابحث في كل الهاردات عن لعبة..." 
                    class="w-full glass py-4 pr-12 pl-4 rounded-2xl text-sm focus:ring-2 focus:ring-blue-500 transition-all">
             <i data-lucide="search" class="absolute right-4 top-4 text-gray-500 w-5 h-5"></i>
         </div>
@@ -59,29 +62,57 @@
         </div>
     </header>
 
+    <!-- Drive Info Header -->
+    <div id="drive-info-box" class="px-6 mb-4">
+        <!-- Stats for selected drive -->
+    </div>
+
     <!-- Main Content -->
     <main id="content-list" class="px-6 space-y-3">
         <!-- Cards injected here -->
     </main>
 
-    <!-- Floating Add Button (Only in Edit Mode) -->
-    <button id="add-game-btn" onclick="openAddModal()" class="fixed bottom-24 left-6 w-14 h-14 bg-blue-600 rounded-full shadow-lg items-center justify-center hidden z-40">
-        <i data-lucide="plus" class="text-white w-8 h-8"></i>
-    </button>
+    <!-- Floating Actions (Edit Mode) -->
+    <div id="edit-actions" class="fixed bottom-24 left-6 flex flex-col gap-3 hidden z-40">
+        <button onclick="openDriveModal()" class="w-12 h-12 bg-indigo-600 rounded-full shadow-lg flex items-center justify-center">
+            <i data-lucide="database" class="text-white w-6 h-6"></i>
+        </button>
+        <button onclick="openGameModal()" class="w-14 h-14 bg-blue-600 rounded-full shadow-lg flex items-center justify-center">
+            <i data-lucide="plus" class="text-white w-8 h-8"></i>
+        </button>
+    </div>
 
-    <!-- Add/Edit Modal -->
-    <div id="modal" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
+    <!-- Game Modal (Add/Edit) -->
+    <div id="game-modal" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
         <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop">
-            <h2 id="modal-title" class="text-xl font-bold mb-4">لعبة جديدة</h2>
+            <h2 id="game-modal-title" class="text-xl font-bold mb-4">إضافة/تعديل لعبة</h2>
             <div class="space-y-4">
                 <input type="text" id="input-game-name" placeholder="اسم اللعبة" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
-                <input type="number" id="input-game-size" placeholder="المساحة (GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
+                <input type="number" step="0.01" id="input-game-size" placeholder="المساحة (GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
+                <div class="text-[10px] text-gray-500 mr-2">مثال: 0.5 تعني 512 ميجا</div>
                 <select id="input-game-drive" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
                     <!-- Drive options -->
                 </select>
                 <div class="flex gap-2 pt-2">
                     <button onclick="saveGame()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold">حفظ</button>
-                    <button onclick="closeModal()" class="flex-1 bg-slate-700 py-3 rounded-xl font-bold text-gray-300">إلغاء</button>
+                    <button onclick="closeModals()" class="flex-1 bg-slate-700 py-3 rounded-xl font-bold text-gray-300">إلغاء</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Drive Modal (Add/Edit) -->
+    <div id="drive-modal" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
+        <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop">
+            <h2 id="drive-modal-title" class="text-xl font-bold mb-4">إعدادات الهارد</h2>
+            <div class="space-y-4">
+                <input type="text" id="input-drive-name" placeholder="اسم الهارد" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
+                <input type="text" id="input-drive-total" placeholder="المساحة الكلية (مثل: 2TB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
+                <input type="text" id="input-drive-free" placeholder="المساحة المتبقية (مثل: 50GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700">
+                <div class="flex gap-2 pt-2">
+                    <button onclick="saveDrive()" class="flex-1 bg-indigo-600 py-3 rounded-xl font-bold">حفظ</button>
+                    <button id="delete-drive-btn" onclick="deleteCurrentDrive()" class="flex-1 bg-red-900/50 text-red-400 py-3 rounded-xl font-bold hidden">حذف</button>
+                    <button onclick="closeModals()" class="flex-1 bg-slate-700 py-3 rounded-xl font-bold text-gray-300">إلغاء</button>
                 </div>
             </div>
         </div>
@@ -91,52 +122,59 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Global State
-        let db, auth, user, appId;
+        // Your New Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAwANOKW2MMg8tTtdy1Y4_WVpYwJFcawzU",
+            authDomain: "mygamelibrary-ac8ec.firebaseapp.com",
+            projectId: "mygamelibrary-ac8ec",
+            storageBucket: "mygamelibrary-ac8ec.firebasestorage.app",
+            messagingSenderId: "573045847112",
+            appId: "1:573045847112:web:da2760be59dd235f5c547d"
+        };
+
+        const appId = "my-game-library-main";
+        let db, auth, user;
         let inventory = [];
-        let currentDriveFilter = 'all';
+        let currentDriveName = '';
         let searchQuery = '';
         let isEditMode = false;
+        let editingGameRef = null;
 
-        const firebaseConfig = JSON.parse('{"apiKey":"AIzaSyCc5hHJXwX57QO1DHTO85B5j4Uz7Q_Wkpo","authDomain":"game-inventory-app.firebaseapp.com","projectId":"game-inventory-app","storageBucket":"game-inventory-app.firebasestorage.app","messagingSenderId":"130612653971","appId":"1:130612653971:web:fe9ae6e9d664497a038266"}');
-        appId = "game-library-pro-v1";
-
-        // Init App
         const init = async () => {
             const app = initializeApp(firebaseConfig);
             auth = getAuth(app);
             db = getFirestore(app);
 
-            // Auth Rule 3: Sign in first
             await signInAnonymously(auth);
-            
             onAuthStateChanged(auth, (u) => {
                 if (u) {
                     user = u;
-                    document.getElementById('auth-status').innerText = "متصل بالسحابة ✅";
+                    document.getElementById('auth-status').innerText = "متصل بسحابتك الخاصة ✅";
                     loadData();
                 }
             });
         };
 
         const loadData = () => {
-            // Rule 1: Strict Paths
             const docRef = doc(db, 'artifacts', appId, 'users', user.uid, 'inventory', 'main');
             onSnapshot(docRef, (docSnap) => {
                 if (docSnap.exists()) {
                     inventory = docSnap.data().drives || [];
                 } else {
-                    // Initial Data Seeding
+                    // Seed with your OLD data
                     inventory = [
-                        { name: 'Toshiba', games: [{name:'FC25', size:45}, {name:'GTA V', size:69}] },
-                        { name: 'WD Blue', games: [{name:'Cyberpunk', size:105}] }
+                        { name: 'Toshiba', total: '1TB', free: '20GB', games: [ { name: 'Call of Duty Black Ops 3', size: 70 }, { name: 'Crash™ Team Racing', size: 20 }, { name: 'eFootball 26', size: 81 }, { name: 'eFootball 26 Egyptian', size: 111 }, { name: 'FC25', size: 45 }, { name: 'FC26', size: 75 }, { name: 'GOW Regnarok', size: 115 }, { name: 'GTA V', size: 69 }, { name: 'Mario Mania', size: 1 }, { name: 'Mortal Kombat 11', size: 70 }, { name: 'Need for Speed Heat', size: 32 }, { name: 'Pes 18', size: 20 }, { name: 'Pes 19', size: 23 }, { name: 'Pes 21', size: 37 }, { name: 'Spider-Man Miles Morales', size: 51 }, { name: 'WWE 2K25', size: 89 } ] },
+                        { name: 'HGST T', total: '1TB', free: '0GB', games: [ { name: "Assassin's Creed III Remastered", size: 40 }, { name: "Assassin's Creed IV Black Flag", size: 25 }, { name: "Assassin's Creed Mirage", size: 27 }, { name: "Assassin's Creed Odyssey", size: 67 }, { name: "Assassin's Creed Origins", size: 48 }, { name: "Assassin's Creed Syndicate", size: 38 }, { name: "Assassin's Creed The Ezio Collection", size: 38 }, { name: "Assassin's Creed Unity", size: 38 }, { name: "Assassin's Creed Valhalla Ragnarok", size: 110 }, { name: 'AWAY OUT', size: 17 }, { name: 'Cars 3 Driven to Win', size: 7 }, { name: 'Dead Island 2', size: 20 }, { name: 'DIRT 5', size: 45 }, { name: 'Guns Gore and Cannoli', size: 2 }, { name: 'Human Fall Flat', size: 3 }, { name: 'LEGO Star Wars The Skywalker Saga', size: 36 }, { name: 'Prince Of Persia The Lost Crown', size: 14 }, { name: 'Red Dead Redemption 1', size: 10 }, { name: 'Red Dead Redemption 2', size: 105 }, { name: 'STAR WARS Battlefront II', size: 83 }, { name: 'STAR WARS Jedi Fallen Order', size: 57 }, { name: 'The Last of Us Remastered', size: 50 }, { name: 'The Last of Us 2', size: 91 } ] },
+                        { name: 'Seagate', total: '1TB', free: '1GB', games: [ { name: 'A Plague Tale Innocence', size: 38 }, { name: 'Alan Wake Remastered', size: 28 }, { name: 'Back 4 Blood', size: 49 }, { name: 'Bloodborne', size: 30 }, { name: 'Bus Simulator 21', size: 6 }, { name: 'CAPTAIN TSUBASA', size: 25 }, { name: 'Chef Life A Restaurant Simulator', size: 4 }, { name: 'Cyberpunk 2077', size: 105 }, { name: 'DARK SOULS™ III', size: 18 }, { name: 'Devil May Cry 5', size: 40 }, { name: 'Dying Light The Following Enhanced Edition', size: 20 }, { name: 'Dying Light 2 Stay Human', size: 60 }, { name: 'Fallout 4', size: 30 }, { name: 'Green Hell', size: 6 }, { name: 'Kena Bridge of Spirits Celebration', size: 9 }, { name: "Marvel's Avengers", size: 110 }, { name: 'Max The Curse of Brotherhood', size: 3 }, { name: 'Metro Exodus', size: 63 }, { name: 'Miraculous.Rise.of.the.Sphinx', size: 5 }, { name: 'MY LITTLE PONY', size: 3 }, { name: 'Rayman Legends', size: 8 }, { name: 'Real Farm', size: 2 }, { name: 'Sackboy A Big Adventure', size: 35 }, { name: 'Sherlock Holmes The Devil\'s Daughter', size: 15 }, { name: 'SIFU', size: 18 }, { name: 'Sleeping Dogs Definitive Edition', size: 16 }, { name: 'Sniper Elite 4', size: 38 }, { name: 'Song Of Horror', size: 15 }, { name: 'Stray', size: 13 }, { name: 'TEKEEN 7', size: 49 }, { name: 'The Callisto Protocol', size: 59 }, { name: 'The Evil Within 1', size: 35 }, { name: 'The Smurfs 2 The Prisoner of the Green Stone', size: 8 }, { name: 'The Walking Dead The Final Season', size: 11 } ] },
+                        { name: '2TB', total: '2TB', free: '0.8GB', games: [ { name: 'BATMAN ARKHAM KNIGHT', size: 51.1 }, { name: 'Call of Duty Black Ops 6', size: 57.3 }, { name: 'Call Of Duty MW 2-3', size: 185 }, { name: 'Elden Ring Shadow of the Erdtree', size: 53.5 }, { name: 'Ghost of Tsushima Directors Cut', size: 45.3 }, { name: 'Hogwarts Legacy', size: 65.5 }, { name: "Marvel's Spider-Man", size: 69.4 }, { name: 'Resident Evil 4', size: 39.3 }, { name: 'Resident Evil 8 Village', size: 34.2 } ] }
                     ];
                     saveToCloud();
                 }
+                if (!currentDriveName && inventory.length > 0) currentDriveName = inventory[0].name;
                 renderUI();
-            }, (err) => console.error("Firestore Error:", err));
+            }, (err) => console.error(err));
         };
 
         const saveToCloud = async () => {
@@ -145,36 +183,49 @@
             await setDoc(docRef, { drives: inventory });
         };
 
-        // UI Logic
+        const formatSize = (size) => {
+            if (size < 1) return `${(size * 1024).toFixed(0)} MB`;
+            return `${size} GB`;
+        };
+
         window.renderUI = () => {
             const tabsContainer = document.getElementById('drive-tabs');
             const listContainer = document.getElementById('content-list');
+            const infoBox = document.getElementById('drive-info-box');
             const driveSelect = document.getElementById('input-game-drive');
 
-            // Render Tabs
-            let tabsHtml = `<button onclick="setFilter('all')" class="px-5 py-2 rounded-xl glass text-sm font-bold ${currentDriveFilter==='all'?'drive-tab-active':''}">الكل</button>`;
-            inventory.forEach(d => {
-                tabsHtml += `<button onclick="setFilter('${d.name}')" class="px-5 py-2 rounded-xl glass text-sm font-bold ${currentDriveFilter===d.name?'drive-tab-active':''}">
-                    ${d.name} <span class="text-[10px] opacity-60 mr-1">${d.games.length}</span>
-                </button>`;
-            });
-            tabsContainer.innerHTML = tabsHtml;
+            tabsContainer.innerHTML = inventory.map(d => `
+                <button onclick="setDrive('${d.name}')" class="px-5 py-2 rounded-xl glass text-sm font-bold ${currentDriveName === d.name ? 'drive-tab-active' : ''}">
+                    ${d.name}
+                </button>
+            `).join('');
 
-            // Update Select Drive
-            driveSelect.innerHTML = inventory.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
+            const currentDrive = inventory.find(d => d.name === currentDriveName);
+            if (currentDrive) {
+                infoBox.innerHTML = `
+                    <div class="glass p-4 rounded-2xl border-l-4 border-blue-500 flex justify-between items-end">
+                        <div>
+                            <p class="text-[10px] text-gray-400">هارد ${currentDrive.name}</p>
+                            <h3 class="text-lg font-bold">الألعاب: ${currentDrive.games.length}</h3>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[10px] text-gray-400">المساحة: ${currentDrive.free} متاح من ${currentDrive.total}</p>
+                            ${isEditMode ? `<button onclick="openDriveModal(true)" class="text-blue-400 text-xs font-bold mt-1 underline">تعديل الهارد</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
 
-            // Render Games
             let gamesToShow = [];
-            inventory.forEach(d => {
-                d.games.forEach((g, idx) => {
-                    // Global Search logic: If searching, show everything. If not, filter by drive.
+            inventory.forEach((d, dIdx) => {
+                d.games.forEach((g, gIdx) => {
                     const matchesSearch = g.name.toLowerCase().includes(searchQuery);
-                    const matchesDrive = currentDriveFilter === 'all' || d.name === currentDriveFilter;
+                    const isFromSelectedDrive = d.name === currentDriveName;
                     
                     if (searchQuery) {
-                        if (matchesSearch) gamesToShow.push({...g, driveName: d.name, index: idx});
-                    } else if (matchesDrive) {
-                        gamesToShow.push({...g, driveName: d.name, index: idx});
+                        if (matchesSearch) gamesToShow.push({...g, driveName: d.name, dIdx, gIdx});
+                    } else if (isFromSelectedDrive) {
+                        gamesToShow.push({...g, driveName: d.name, dIdx, gIdx});
                     }
                 });
             });
@@ -183,75 +234,128 @@
                 <div class="glass p-4 rounded-2xl flex justify-between items-center animate-pop">
                     <div>
                         <h4 class="font-bold text-white text-sm">${g.name}</h4>
-                        <span class="text-[10px] text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-md mt-1 inline-block">${g.driveName}</span>
+                        ${searchQuery ? `<span class="text-[9px] text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-md mt-1 inline-block">${g.driveName}</span>` : ''}
                     </div>
-                    <div class="flex items-center gap-4">
+                    <div class="flex items-center gap-3">
                         <div class="text-left">
-                            <span class="text-lg font-bold text-green-400">${g.size}</span>
-                            <span class="text-[10px] text-gray-500 block">GB</span>
+                            <span class="text-base font-bold text-green-400">${formatSize(g.size)}</span>
                         </div>
-                        ${isEditMode ? `<button onclick="deleteGame('${g.driveName}', ${g.index})" class="text-red-500 p-2"><i data-lucide="trash-2" class="w-4 h-4"></i></button>` : ''}
+                        ${isEditMode ? `
+                            <button onclick="editGame(${g.dIdx}, ${g.gIdx})" class="text-blue-400 p-1"><i data-lucide="edit-3" class="w-4 h-4"></i></button>
+                            <button onclick="deleteGame(${g.dIdx}, ${g.gIdx})" class="text-red-500 p-1"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        ` : ''}
                     </div>
                 </div>
             `).join('');
             
             lucide.createIcons();
+            driveSelect.innerHTML = inventory.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
         };
 
-        window.setFilter = (f) => {
-            currentDriveFilter = f;
-            renderUI();
-        };
+        window.setDrive = (name) => { currentDriveName = name; renderUI(); };
 
         window.toggleEditMode = () => {
             isEditMode = !isEditMode;
-            document.getElementById('edit-toggle-btn').classList.toggle('text-blue-400');
-            document.getElementById('add-game-btn').style.display = isEditMode ? 'flex' : 'none';
+            document.getElementById('edit-toggle-btn').classList.toggle('bg-blue-600');
+            document.getElementById('edit-toggle-btn').classList.toggle('text-white');
+            document.getElementById('edit-actions').style.display = isEditMode ? 'flex' : 'none';
             renderUI();
         };
 
-        // Search logic
         document.getElementById('global-search').addEventListener('input', (e) => {
             searchQuery = e.target.value.toLowerCase();
             renderUI();
         });
 
-        // CRUD Operations
-        window.openAddModal = () => {
-            document.getElementById('modal').classList.remove('hidden');
-            document.getElementById('modal').classList.add('flex');
+        window.closeModals = () => {
+            document.getElementById('game-modal').classList.add('hidden');
+            document.getElementById('drive-modal').classList.add('hidden');
+            editingGameRef = null;
         };
 
-        window.closeModal = () => {
-            document.getElementById('modal').classList.add('hidden');
-            document.getElementById('modal').classList.remove('flex');
+        window.openGameModal = () => {
+            document.getElementById('game-modal-title').innerText = "إضافة لعبة";
+            document.getElementById('input-game-name').value = '';
+            document.getElementById('input-game-size').value = '';
+            document.getElementById('input-game-drive').value = currentDriveName;
+            document.getElementById('game-modal').classList.remove('hidden');
+            document.getElementById('game-modal').classList.add('flex');
+        };
+
+        window.editGame = (dIdx, gIdx) => {
+            const g = inventory[dIdx].games[gIdx];
+            editingGameRef = { dIdx, gIdx };
+            document.getElementById('game-modal-title').innerText = "تعديل لعبة";
+            document.getElementById('input-game-name').value = g.name;
+            document.getElementById('input-game-size').value = g.size;
+            document.getElementById('input-game-drive').value = inventory[dIdx].name;
+            document.getElementById('game-modal').classList.remove('hidden');
+            document.getElementById('game-modal').classList.add('flex');
         };
 
         window.saveGame = async () => {
             const name = document.getElementById('input-game-name').value;
             const size = parseFloat(document.getElementById('input-game-size').value);
-            const driveName = document.getElementById('input-game-drive').value;
+            const targetDriveName = document.getElementById('input-game-drive').value;
 
             if (!name || isNaN(size)) return;
-
-            const driveIdx = inventory.findIndex(d => d.name === driveName);
-            inventory[driveIdx].games.push({ name, size });
+            if (editingGameRef) inventory[editingGameRef.dIdx].games.splice(editingGameRef.gIdx, 1);
             
+            const dIdx = inventory.findIndex(d => d.name === targetDriveName);
+            inventory[dIdx].games.push({ name, size });
+
             await saveToCloud();
-            closeModal();
-            document.getElementById('input-game-name').value = '';
-            document.getElementById('input-game-size').value = '';
+            closeModals();
         };
 
-        window.deleteGame = async (driveName, gameIdx) => {
-            if (!confirm('هتمسح اللعبة دي؟')) return;
-            const driveIdx = inventory.findIndex(d => d.name === driveName);
-            inventory[driveIdx].games.splice(gameIdx, 1);
+        window.deleteGame = async (dIdx, gIdx) => {
+            if (confirm('حذف اللعبة؟')) {
+                inventory[dIdx].games.splice(gIdx, 1);
+                await saveToCloud();
+            }
+        };
+
+        window.openDriveModal = (isEdit = false) => {
+            const d = inventory.find(i => i.name === currentDriveName);
+            document.getElementById('drive-modal-title').innerText = isEdit ? "تعديل الهارد" : "إضافة هارد جديد";
+            document.getElementById('input-drive-name').value = isEdit ? d.name : '';
+            document.getElementById('input-drive-total').value = isEdit ? d.total : '';
+            document.getElementById('input-drive-free').value = isEdit ? d.free : '';
+            document.getElementById('delete-drive-btn').style.display = isEdit ? 'block' : 'none';
+            document.getElementById('drive-modal').classList.remove('hidden');
+            document.getElementById('drive-modal').classList.add('flex');
+        };
+
+        window.saveDrive = async () => {
+            const name = document.getElementById('input-drive-name').value;
+            const total = document.getElementById('input-drive-total').value;
+            const free = document.getElementById('input-drive-free').value;
+            if (!name) return;
+
+            const idx = inventory.findIndex(d => d.name === currentDriveName);
+            if (idx > -1 && document.getElementById('drive-modal-title').innerText === "تعديل الهارد") {
+                inventory[idx].name = name;
+                inventory[idx].total = total;
+                inventory[idx].free = free;
+                currentDriveName = name;
+            } else {
+                inventory.push({ name, total, free, games: [] });
+                currentDriveName = name;
+            }
             await saveToCloud();
+            closeModals();
+        };
+
+        window.deleteCurrentDrive = async () => {
+            if (confirm('حذف الهارد وكل اللي فيه؟')) {
+                inventory = inventory.filter(d => d.name !== currentDriveName);
+                currentDriveName = inventory.length > 0 ? inventory[0].name : '';
+                await saveToCloud();
+                closeModals();
+            }
         };
 
         init();
-
     </script>
 </body>
 </html>

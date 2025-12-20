@@ -1,0 +1,17 @@
+{
+  "name": "Game Library Pro",
+  "short_name": "مكتبتي",
+  "description": "إدارة ألعاب الهاردات الخارجية",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1f2937",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/686/686589.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

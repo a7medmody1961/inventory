@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>مكتبة الألعاب | Game Library Pro</title>
+    <!-- PWA Meta Tags -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1f2937">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <!-- Tailwind CSS & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background-color: #0f172a;
+            background-image: url('https://images.unsplash.com/photo-1593305412497-6a1a46b9a89c?fit=crop&w=1920&h=1080&q=80');
+            background-size: cover;
+            background-attachment: fixed;
+            color: #f8fafc;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: linear-gradient(180deg, rgba(15, 23, 42, 0.9) 0%, rgba(15, 23, 42, 0.8) 100%);
+            z-index: -1;
+        }
+        .glass-card {
+            background: rgba(31, 41, 55, 0.6);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .drive-active {
+            border-bottom: 4px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            height: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #3b82f6;
+            border-radius: 10px;
+        }
+        /* Sticky search animation */
+        .search-container {
+            transition: all 0.3s ease;
+        }
+        .is-sticky {
+            padding: 10px 0;
+            background: rgba(15, 23, 42, 0.95);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade { animation: fadeIn 0.4s ease-out forwards; }
+    </style>
+</head>
+<body class="pb-24">
+
+    <!-- Header & Stats -->
+    <header class="p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-800 text-blue-400">مكتبة ألعابي 🎮</h1>
+            <div id="offline-indicator" class="hidden px-3 py-1 bg-yellow-600 text-xs rounded-full font-bold">وضع الأوفلاين</div>
+        </div>
+        
+        <!-- Dashboard Stats -->
+        <div class="grid grid-cols-2 gap-4 mb-6">
+            <div class="glass-card p-4 rounded-2xl">
+                <p class="text-gray-400 text-xs mb-1">إجمالي الألعاب</p>
+                <h2 id="stat-total-games" class="text-xl font-bold">0</h2>
+            </div>
+            <div class="glass-card p-4 rounded-2xl">
+                <p class="text-gray-400 text-xs mb-1">المساحة المستهلكة</p>
+                <h2 id="stat-total-size" class="text-xl font-bold">0 <span class="text-xs">GB</span></h2>
+            </div>
+        </div>
+    </header>
+
+    <!-- Search Bar (Sticky) -->
+    <div id="search-bar" class="sticky top-0 z-50 px-6 py-2 transition-all duration-300">
+        <div class="relative group">
+            <input type="text" id="main-search" placeholder="ابحث عن اسم لعبة في كل الهاردات..." 
+                   class="w-full glass-card py-4 pr-12 pl-4 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm">
+            <i data-lucide="search" class="absolute right-4 top-4 text-gray-400"></i>
+        </div>
+    </div>
+
+    <!-- Drives Navigation (Horizontal Scroll on Mobile) -->
+    <nav class="flex overflow-x-auto whitespace-nowrap px-6 py-4 gap-3 custom-scrollbar">
+        <button onclick="changeDrive('all')" id="nav-all" class="px-6 py-2 rounded-xl glass-card text-sm font-bold drive-active">الكل</button>
+        <div id="drive-nav-list" class="flex gap-3">
+            <!-- Drives list injected here -->
+        </div>
+    </nav>
+
+    <!-- Content Area -->
+    <main id="game-container" class="px-6 space-y-4">
+        <!-- Game Cards or Search Results injected here -->
+        <div class="text-center py-10 text-gray-400">جارٍ تحميل مكتبتك...</div>
+    </main>
+
+    <!-- Bottom Action Bar (Mobile App Style) -->
+    <div class="fixed bottom-0 left-0 right-0 glass-card border-t border-gray-700 p-4 flex justify-around items-center z-50">
+        <button onclick="window.scrollTo({top: 0, behavior: 'smooth'})" class="flex flex-col items-center gap-1 text-blue-400">
+            <i data-lucide="home" class="w-6 h-6"></i>
+            <span class="text-[10px]">الرئيسية</span>
+        </button>
+        <button onclick="exportJSON()" class="flex flex-col items-center gap-1 text-gray-400">
+            <i data-lucide="download" class="w-6 h-6"></i>
+            <span class="text-[10px]">تصدير</span>
+        </button>
+        <button onclick="toggleInfo()" class="flex flex-col items-center gap-1 text-gray-400">
+            <i data-lucide="info" class="w-6 h-6"></i>
+            <span class="text-[10px]">معلومات</span>
+        </button>
+    </div>
+
+    <!-- Info Modal -->
+    <div id="info-modal" class="fixed inset-0 bg-black/80 hidden z-[60] items-center justify-center p-6">
+        <div class="glass-card w-full max-w-md p-6 rounded-3xl text-center">
+            <h3 class="text-xl font-bold mb-4">عن المكتبة</h3>
+            <p class="text-gray-300 text-sm leading-relaxed mb-6">
+                هذا الموقع مصمم ليكون مرجعك السريع لكل ألعابك المخزنة على الهاردات الخارجية. يعمل بدون إنترنت بعد أول مرة تفتحه فيها.
+            </p>
+            <button onclick="toggleInfo()" class="bg-blue-600 px-8 py-3 rounded-xl font-bold">فهمت</button>
+        </div>
+    </div>
+
+    <script>
+        // Data injected from your previous turn
+        const inventoryData = [
+            { name: 'Toshiba', freeSpace: 20, games: [ { name: 'Call of Duty Black Ops 3', size: 70 }, { name: 'Crash™ Team Racing', size: 20 }, { name: 'eFootball 26', size: 81 }, { name: 'eFootball 26 Egyptian', size: 111 }, { name: 'FC25', size: 45 }, { name: 'FC26', size: 75 }, { name: 'GOW Regnarok', size: 115 }, { name: 'GTA V', size: 69 }, { name: 'Mario Mania', size: 1 }, { name: 'Mortal Kombat 11', size: 70 }, { name: 'Need for Speed Heat', size: 32 }, { name: 'Pes 18', size: 20 }, { name: 'Pes 19', size: 23 }, { name: 'Pes 21', size: 37 }, { name: 'Spider-Man Miles Morales', size: 51 }, { name: 'WWE 2K25', size: 89 } ] },
+            { name: 'HGST T', freeSpace: 0, games: [ { name: "Assassin's Creed III Remastered", size: 40 }, { name: "Assassin's Creed IV Black Flag", size: 25 }, { name: "Assassin's Creed Mirage", size: 27 }, { name: "Assassin's Creed Odyssey", size: 67 }, { name: "Assassin's Creed Origins", size: 48 }, { name: "Assassin's Creed Syndicate", size: 38 }, { name: "Assassin's Creed The Ezio Collection", size: 38 }, { name: "Assassin's Creed Unity", size: 38 }, { name: "Assassin's Creed Valhalla Ragnarok", size: 110 }, { name: 'AWAY OUT', size: 17 }, { name: 'Cars 3 Driven to Win', size: 7 }, { name: 'Dead Island 2', size: 20 }, { name: 'DIRT 5', size: 45 }, { name: 'Guns Gore and Cannoli', size: 2 }, { name: 'Human Fall Flat', size: 3 }, { name: 'LEGO Star Wars The Skywalker Saga', size: 36 }, { name: 'Prince Of Persia The Lost Crown', size: 14 }, { name: 'Red Dead Redemption 1', size: 10 }, { name: 'Red Dead Redemption 2', size: 105 }, { name: 'STAR WARS Battlefront II', size: 83 }, { name: 'STAR WARS Jedi Fallen Order', size: 57 }, { name: 'The Last of Us Remastered', size: 50 }, { name: 'The Last of Us 2', size: 91 } ] },
+            { name: 'Seagate', freeSpace: 1, games: [ { name: 'A Plague Tale Innocence', size: 38 }, { name: 'Alan Wake Remastered', size: 28 }, { name: 'Back 4 Blood', size: 49 }, { name: 'Bloodborne', size: 30 }, { name: 'Bus Simulator 21', size: 6 }, { name: 'CAPTAIN TSUBASA', size: 25 }, { name: 'Chef Life A Restaurant Simulator', size: 4 }, { name: 'Cyberpunk 2077', size: 105 }, { name: 'DARK SOULS™ III', size: 18 }, { name: 'Devil May Cry 5', size: 40 }, { name: 'Dying Light The Following Enhanced Edition', size: 20 }, { name: 'Dying Light 2 Stay Human', size: 60 }, { name: 'Fallout 4', size: 30 }, { name: 'Green Hell', size: 6 }, { name: 'Kena Bridge of Spirits Celebration', size: 9 }, { name: "Marvel's Avengers", size: 110 }, { name: 'Max The Curse of Brotherhood', size: 3 }, { name: 'Metro Exodus', size: 63 }, { name: 'Miraculous.Rise.of.the.Sphinx', size: 5 }, { name: 'MY LITTLE PONY', size: 3 }, { name: 'Rayman Legends', size: 8 }, { name: 'Real Farm', size: 2 }, { name: 'Sackboy A Big Adventure', size: 35 }, { name: 'Sherlock Holmes The Devil\'s Daughter', size: 15 }, { name: 'SIFU', size: 18 }, { name: 'Sleeping Dogs Definitive Edition', size: 16 }, { name: 'Sniper Elite 4', size: 38 }, { name: 'Song Of Horror', size: 15 }, { name: 'Stray', size: 13 }, { name: 'TEKEEN 7', size: 49 }, { name: 'The Callisto Protocol', size: 59 }, { name: 'The Evil Within 1', size: 35 }, { name: 'The Smurfs 2 The Prisoner of the Green Stone', size: 8 }, { name: 'The Walking Dead The Final Season', size: 11 } ] },
+            { name: 'New Segate', freeSpace: 1, games: [ { name: 'Atomic Heart', size: 45 }, { name: 'Battlefield 1', size: 40 }, { name: 'Battlefield 4', size: 30 }, { name: 'Battlefield V', size: 35 }, { name: 'Ben 10 Power Trip', size: 1 }, { name: 'Evil West', size: 25 }, { name: 'FARCRY6', size: 97 }, { name: 'Farm For Your Life', size: 1 }, { name: 'FINAL FANTASY VII', size: 40 }, { name: 'GRIP', size: 3 }, { name: 'Gung Rave', size: 28 }, { name: 'Hello Neighbor', size: 2 }, { name: 'Hello Neighbor 2', size: 9 }, { name: 'Horizon Chase Turbo', size: 1 }, { name: 'HORIZON Forbidden West', size: 90 }, { name: 'Horizon Zero Dawn™ Complete Edition', size: 50 }, { name: 'Inside', size: 1 }, { name: 'It Takes Two', size: 35 }, { name: 'Like a Dragon Ishin!', size: 26 }, { name: 'Limbo', size: 1 }, { name: 'Minecraft Dungeons', size: 1 }, { name: 'Need for Speed Most Wanted', size: 4 }, { name: 'Need for Speed Payback', size: 20 }, { name: 'Neighbours Back From Hell', size: 2 }, { name: 'PEPSI MAN', size: 1 }, { name: 'PES 2013', size: 2 }, { name: 'Ratchet & Clank', size: 25 }, { name: 'Rise of the Tomb Raider', size: 20 }, { name: 'Road Redemption', size: 3 }, { name: 'Sekiro Shadows Die Twice', size: 15 }, { name: 'Shadow Of The Colossus', size: 13 }, { name: 'Shadow of the Tomb Raider', size: 26 }, { name: 'Shadow of War', size: 43 }, { name: 'Skydrift Infinity', size: 2 }, { name: 'The Pedestrian', size: 2 }, { name: 'Uncharted The Lost Legacy', size: 45 }, { name: 'Uncharted 4 A Thief’s End', size: 63 }, { name: 'Until Dawn', size: 49 }, { name: 'Wanted Dead', size: 20 }, { name: 'Wo Long Fallen Dynasty', size: 31 } ] },
+            { name: '2TB', freeSpace: 0.8, games: [ { name: 'BATMAN ARKHAM KNIGHT', size: 51.1 }, { name: 'Bibed', size: 5.88 }, { name: 'Brunswick Pro Bowling', size: 0.8 }, { name: 'Call of Duty Black Ops 6', size: 57.3 }, { name: 'Call Of Duty MW 2-3', size: 185 }, { name: 'Crash Bandicoot 4 its about time', size: 21.1 }, { name: 'Days Gone', size: 56.9 }, { name: 'Detroit', size: 40.1 }, { name: 'Dragon Ball Z', size: 46.4 }, { name: 'Elden Ring Nightreign', size: 18.9 }, { name: 'Elden Ring Shadow of the Erdtree', size: 53.5 }, { name: 'GANG BEATS', size: 1.66 }, { name: 'Ghost of Tsushima Directors Cut', size: 45.3 }, { name: 'Ghost recon', size: 35.3 }, { name: 'God Of War 2018', size: 43.4 }, { name: 'God of War® III', size: 36.7 }, { name: 'GYLT', size: 10.7 }, { name: 'High on Life', size: 37.5 }, { name: 'HITMAN3', size: 63.7 }, { name: 'Hogwarts Legacy', size: 65.5 }, { name: 'Hollow Knight Silksong', size: 4 }, { name: 'Home Front', size: 31 }, { name: 'Injustice 2', size: 30.5 }, { name: 'Little Nightmares 3', size: 20.7 }, { name: 'Mafia Definitive Edition', size: 41.4 }, { name: 'Mafia II Definitive Edition', size: 51.1 }, { name: 'Marsupilami Hoobadventure', size: 1.8 }, { name: 'MARVEL GUARDIANS GALAXY', size: 63.3 }, { name: "Marvel's Spider-Man", size: 69.4 }, { name: 'Minecraft Legends', size: 7.9 }, { name: 'Mortal kombat XL', size: 39.8 }, { name: 'Mount And Blade 2', size: 38.5 }, { name: 'Overcooked', size: 0.3 }, { name: 'Overcooked.2', size: 2.6 }, { name: 'Oxide Room 104', size: 12.2 }, { name: 'PES 19 (PRESSX_EDITION)', size: 42.4 }, { name: 'PHOGS', size: 1.9 }, { name: 'Pode', size: 1.2 }, { name: 'Police Simulator Patrol Officers', size: 9.4 }, { name: 'Prototype', size: 7.1 }, { name: 'Resident Evil 2 Revelations', size: 20.4 }, { name: 'Resident Evil 3', size: 21.5 }, { name: 'Resident Evil 4', size: 39.3 }, { name: 'Resident Evil 5', size: 15.4 }, { name: 'Resident Evil 6', size: 15.1 }, { name: 'Resident Evil 7 biohazard', size: 22.7 }, { name: 'Resident Evil 8 Village', size: 34.2 }, { name: 'Sega Genesis Collection', size: 0.8 }, { name: 'Smurfs Kart', size: 3.8 }, { name: 'Sonic Mania', size: 0.2 }, { name: 'Sonic Racing', size: 15.1 }, { name: 'Street Fighter 6', size: 35.9 }, { name: 'Street Fighter V', size: 36.9 }, { name: 'Teenage Mutant Ninja Turtles', size: 0.9 }, { name: 'The Smurfs Mission Vileaf', size: 1.7 }, { name: 'The Witcher 3', size: 37.6 }, { name: 'Trials Rising', size: 28.1 }, { name: 'UFC3', size: 17.6 }, { name: 'UFC4', size: 26.3 }, { name: 'Uncharted The Nathan Drake Collection', size: 41.5 }, { name: 'View Finder', size: 10.9 }, { name: 'Visage', size: 16.7 }, { name: 'Watch dogs 2', size: 28.5 }, { name: 'Watch Dogs Legion', size: 29.9 }, { name: 'WWE SmackDown! Here Comes the Pain', size: 4.2 } ] }
+        ];
+
+        let currentDrive = 'all';
+        let searchQuery = '';
+
+        // Initialization
+        window.onload = () => {
+            lucide.createIcons();
+            renderDriveNav();
+            updateStats();
+            renderGames();
+            
+            // Search listener
+            document.getElementById('main-search').addEventListener('input', (e) => {
+                searchQuery = e.target.value.toLowerCase();
+                renderGames();
+            });
+
+            // Sticky Header Logic
+            window.addEventListener('scroll', () => {
+                const header = document.getElementById('search-bar');
+                if (window.scrollY > 50) {
+                    header.classList.add('is-sticky');
+                } else {
+                    header.classList.remove('is-sticky');
+                }
+            });
+
+            // Register Service Worker
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('sw.js').then(() => {
+                    console.log('SW Registered');
+                });
+            }
+            
+            // Offline detection
+            window.addEventListener('offline', () => document.getElementById('offline-indicator').classList.remove('hidden'));
+            window.addEventListener('online', () => document.getElementById('offline-indicator').classList.add('hidden'));
+        };
+
+        function updateStats() {
+            let totalGames = 0;
+            let totalSize = 0;
+            inventoryData.forEach(d => {
+                totalGames += d.games.length;
+                d.games.forEach(g => totalSize += g.size);
+            });
+            document.getElementById('stat-total-games').innerText = totalGames;
+            document.getElementById('stat-total-size').innerHTML = `${Math.round(totalSize)} <span class="text-xs">GB</span>`;
+        }
+
+        function renderDriveNav() {
+            const list = document.getElementById('drive-nav-list');
+            list.innerHTML = inventoryData.map((drive, index) => `
+                <button onclick="changeDrive('${drive.name}')" id="nav-${drive.name}" 
+                        class="px-6 py-2 rounded-xl glass-card text-sm font-bold transition-all">
+                    ${drive.name}
+                </button>
+            `).join('');
+        }
+
+        function changeDrive(name) {
+            currentDrive = name;
+            // Update UI
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('drive-active'));
+            document.getElementById(`nav-${name}`).classList.add('drive-active');
+            renderGames();
+        }
+
+        function renderGames() {
+            const container = document.getElementById('game-container');
+            let gamesToDisplay = [];
+
+            if (currentDrive === 'all') {
+                inventoryData.forEach(d => {
+                    d.games.forEach(g => gamesToDisplay.push({...g, drive: d.name}));
+                });
+            } else {
+                const drive = inventoryData.find(d => d.name === currentDrive);
+                drive.games.forEach(g => gamesToDisplay.push({...g, drive: drive.name}));
+            }
+
+            // Apply Search
+            if (searchQuery) {
+                gamesToDisplay = gamesToDisplay.filter(g => g.name.toLowerCase().includes(searchQuery));
+            }
+
+            if (gamesToDisplay.length === 0) {
+                container.innerHTML = `<div class="text-center py-20 text-gray-500">مفيش ألعاب بالاسم ده يا بطل...</div>`;
+                return;
+            }
+
+            container.innerHTML = gamesToDisplay.map((game, i) => `
+                <div class="glass-card p-4 rounded-2xl flex justify-between items-center animate-fade" style="animation-delay: ${Math.min(i*0.05, 1)}s">
+                    <div class="flex-1">
+                        <h4 class="font-bold text-sm mb-1 text-white">${game.name}</h4>
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-md">${game.drive}</span>
+                        </div>
+                    </div>
+                    <div class="text-left">
+                        <span class="text-lg font-bold text-green-400">${game.size}</span>
+                        <span class="text-[10px] text-gray-400 block">GB</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleInfo() {
+            const modal = document.getElementById('info-modal');
+            modal.classList.toggle('hidden');
+            modal.classList.toggle('flex');
+        }
+
+        function exportJSON() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(inventoryData, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href",     dataStr);
+            downloadAnchorNode.setAttribute("download", "games_backup.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+    </script>
+</body>
+</html>

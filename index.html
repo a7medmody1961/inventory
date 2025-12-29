@@ -27,11 +27,15 @@
             color: white;
             box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
         }
-        .safe-area-pb { padding-bottom: calc(env(safe-area-inset-bottom) + 5rem); }
+        .safe-area-pb { padding-bottom: calc(env(safe-area-inset-bottom) + 6rem); }
         input:focus, select:focus { outline: none; border-color: #3b82f6; }
         .animate-pop { animation: pop 0.2s ease-out; }
         @keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
+        
+        /* تنسيق خاص لتقرير الصور */
+        .report-list::-webkit-scrollbar { width: 4px; }
+        .report-list::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
     </style>
 </head>
 <body class="safe-area-pb">
@@ -89,7 +93,14 @@
     <!-- Floating Actions (Edit Mode) -->
     <div id="edit-actions" class="fixed bottom-24 left-6 flex flex-col gap-3 hidden z-40">
         
-        <!-- أزرار الإكسيل (تصدير واستيراد) -->
+        <!-- زر فحص الصور الجديد -->
+        <button onclick="document.getElementById('folder-input').click()" class="w-12 h-12 bg-purple-600 rounded-full shadow-lg flex items-center justify-center hover:bg-purple-500 transition animate-pop" title="فحص صور الألعاب">
+            <i data-lucide="image" class="text-white w-5 h-5"></i>
+        </button>
+        <!-- Input خاص لاختيار فولدر كامل -->
+        <input type="file" id="folder-input" class="hidden" webkitdirectory directory multiple onchange="analyzeImages(this)">
+
+        <!-- أزرار الإكسيل -->
         <div class="flex gap-2 animate-pop">
             <button onclick="exportToExcel()" class="w-12 h-12 bg-green-600 rounded-full shadow-lg flex items-center justify-center hover:bg-green-500 transition" title="تصدير لملف Excel">
                 <i data-lucide="download" class="text-white w-5 h-5"></i>
@@ -127,7 +138,7 @@
         </div>
     </div>
 
-    <!-- Drive Modal (Add/Edit) -->
+    <!-- Drive Modal -->
     <div id="drive-modal" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
         <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop text-right" dir="rtl">
             <h2 id="drive-modal-title" class="text-xl font-bold mb-4 text-white">إعدادات الهارد</h2>
@@ -140,6 +151,49 @@
                     <button id="delete-drive-btn" onclick="deleteCurrentDrive()" class="flex-1 bg-red-900/50 text-red-400 py-3 rounded-xl font-bold hidden">حذف</button>
                     <button onclick="closeModals()" class="flex-1 bg-slate-700 py-3 rounded-xl font-bold text-gray-300">إلغاء</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Modal (نتيجة فحص الصور) -->
+    <div id="report-modal" class="fixed inset-0 bg-black/95 z-[150] hidden items-center justify-center p-4 backdrop-blur-sm">
+        <div class="glass w-full max-w-lg h-[80vh] flex flex-col p-6 rounded-3xl animate-pop text-right" dir="rtl">
+            <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
+                <h2 class="text-xl font-bold text-white">تقرير مطابقة الصور</h2>
+                <button onclick="document.getElementById('report-modal').classList.add('hidden')" class="text-gray-400"><i data-lucide="x" class="w-6 h-6"></i></button>
+            </div>
+            
+            <div class="flex gap-4 mb-4 text-xs font-bold text-center">
+                <div class="flex-1 bg-green-500/20 p-2 rounded-xl border border-green-500/50">
+                    <div class="text-green-400 text-lg" id="stat-matched">0</div>
+                    <div>متطابق</div>
+                </div>
+                <div class="flex-1 bg-red-500/20 p-2 rounded-xl border border-red-500/50">
+                    <div class="text-red-400 text-lg" id="stat-missing-img">0</div>
+                    <div>بدون صورة</div>
+                </div>
+                <div class="flex-1 bg-yellow-500/20 p-2 rounded-xl border border-yellow-500/50">
+                    <div class="text-yellow-400 text-lg" id="stat-extra-img">0</div>
+                    <div>صور زيادة</div>
+                </div>
+            </div>
+
+            <div class="flex-1 overflow-y-auto report-list space-y-4">
+                
+                <div id="missing-images-section">
+                    <h3 class="text-red-400 font-bold mb-2 flex items-center gap-2"><i data-lucide="image-off" class="w-4 h-4"></i> ألعاب تحتاج لصور</h3>
+                    <ul id="list-missing-images" class="text-sm space-y-1 text-gray-300 list-disc pr-4"></ul>
+                </div>
+
+                <div id="extra-images-section" class="mt-4 pt-4 border-t border-gray-700">
+                    <h3 class="text-yellow-400 font-bold mb-2 flex items-center gap-2"><i data-lucide="file-warning" class="w-4 h-4"></i> صور ليس لها ألعاب (زيادة)</h3>
+                    <ul id="list-extra-images" class="text-sm space-y-1 text-gray-300 list-disc pr-4"></ul>
+                </div>
+
+            </div>
+            
+            <div class="mt-4 pt-2 text-center text-[10px] text-gray-500">
+                * المطابقة تتجاهل الحروف الكبيرة والرموز (مثلاً: God-of-War = God of War)
             </div>
         </div>
     </div>
@@ -163,7 +217,7 @@
         let inventory = [];
         let currentDriveName = '';
         let searchQuery = '';
-        let currentSort = 'alpha'; // افتراضي أبجدي
+        let currentSort = 'alpha';
         let isEditMode = false;
         let editingGameRef = null;
         let isFirstLoad = true;
@@ -397,19 +451,16 @@
 
         // --- وظائف التصدير والاستيراد (Excel/CSV) ---
 
-        // تصدير البيانات كملف CSV (يفتح في Excel)
         window.exportToExcel = () => {
             if (!inventory || inventory.length === 0) {
                 alert("لا توجد بيانات لتصديرها!");
                 return;
             }
 
-            // إعداد رؤوس الأعمدة
             let csvContent = "\uFEFFاسم الهارد,المساحة الكلية للهارد,المساحة المتبقية للهارد,اسم اللعبة,مساحة اللعبة (GB)\n";
 
             inventory.forEach(drive => {
                 if (drive.games.length === 0) {
-                    // إذا الهارد فارغ من الألعاب، نطبع بيانات الهارد فقط
                     csvContent += `"${drive.name}","${drive.total}","${drive.free}","",""\n`;
                 } else {
                     drive.games.forEach(game => {
@@ -430,7 +481,6 @@
             URL.revokeObjectURL(url);
         };
 
-        // استيراد البيانات من ملف CSV
         window.importFromExcel = (inputElement) => {
             const file = inputElement.files[0];
             if (!file) return;
@@ -445,32 +495,20 @@
                 try {
                     const text = e.target.result;
                     const lines = text.split('\n');
-                    
-                    // تجاوز سطر العناوين
                     if (lines.length < 2) {
                         alert("الملف فارغ أو غير صالح.");
                         return;
                     }
 
                     const tempInventoryMap = {};
-
-                    // البدء من السطر الثاني (تخطي العناوين)
                     for (let i = 1; i < lines.length; i++) {
                         const line = lines[i].trim();
                         if (!line) continue;
 
-                        // تحليل السطر (Splitting CSV respecting quotes is complex, 
-                        // but for simple game names this regex works for standard Excel CSV)
-                        // This regex handles: "Drive Name","Total","Free","Game","Size"
                         const cols = line.match(/(?:\"([^\"]*)\")|([^,]+)/g);
-                        
                         if (!cols) continue;
-
-                        // تنظيف القيم من الفواصل وعلامات التنصيص
                         const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
 
-                        // ترتيب الأعمدة حسب التصدير:
-                        // 0: اسم الهارد، 1: كلي، 2: متبقي، 3: اسم اللعبة، 4: حجم اللعبة
                         const driveName = cleanCols[0];
                         const driveTotal = cleanCols[1] || "";
                         const driveFree = cleanCols[2] || "";
@@ -479,7 +517,6 @@
 
                         if (!driveName) continue;
 
-                        // إنشاء الهارد إذا لم يكن موجوداً في القائمة المؤقتة
                         if (!tempInventoryMap[driveName]) {
                             tempInventoryMap[driveName] = {
                                 name: driveName,
@@ -489,7 +526,6 @@
                             };
                         }
 
-                        // إضافة اللعبة إذا وجدت
                         if (gameName && !isNaN(gameSize)) {
                             tempInventoryMap[driveName].games.push({
                                 name: gameName,
@@ -513,9 +549,94 @@
                     console.error(error);
                     alert("حدث خطأ أثناء قراءة الملف. تأكد أنه ملف CSV صحيح.");
                 }
-                inputElement.value = ''; // تصفير المدخل
+                inputElement.value = '';
             };
             reader.readAsText(file);
+        };
+
+        // --- وظيفة فحص الصور (New Logic) ---
+        
+        // دالة لتوحيد النصوص للمقارنة (تجاهل الرموز والمسافات الزائدة)
+        const normalize = (str) => {
+            return str.toLowerCase()
+                      .replace(/['":\-\.]/g, '') // حذف الرموز
+                      .replace(/\s+/g, ' ')      // توحيد المسافات
+                      .trim();
+        };
+
+        window.analyzeImages = (inputElement) => {
+            const files = Array.from(inputElement.files);
+            
+            if (files.length === 0) return;
+
+            // 1. تجميع كل ألعاب المكتبة
+            const allLibraryGames = [];
+            inventory.forEach(drive => {
+                drive.games.forEach(game => {
+                    allLibraryGames.push({ 
+                        originalName: game.name, 
+                        normName: normalize(game.name),
+                        drive: drive.name 
+                    });
+                });
+            });
+
+            // 2. تجميع كل صور الفولدر (مع تجاهل الامتدادات)
+            const allImages = [];
+            files.forEach(file => {
+                // التأكد انه ملف صورة
+                if (file.type.startsWith('image/') || file.name.match(/\.(jpg|jpeg|png|webp)$/i)) {
+                    const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
+                    allImages.push({
+                        originalName: file.name,
+                        normName: normalize(nameWithoutExt)
+                    });
+                }
+            });
+
+            // 3. المقارنة
+            let matchedCount = 0;
+            const missingImages = []; // ألعاب في المكتبة ملهاش صور
+            const extraImages = [];   // صور في الفولدر ملهاش ألعاب
+
+            // البحث عن الصور المفقودة
+            allLibraryGames.forEach(game => {
+                const found = allImages.some(img => img.normName === game.normName);
+                if (found) {
+                    matchedCount++;
+                } else {
+                    missingImages.push(game);
+                }
+            });
+
+            // البحث عن الصور الزائدة
+            allImages.forEach(img => {
+                const found = allLibraryGames.some(game => game.normName === img.normName);
+                if (!found) {
+                    extraImages.push(img);
+                }
+            });
+
+            // 4. عرض التقرير
+            document.getElementById('stat-matched').innerText = matchedCount;
+            document.getElementById('stat-missing-img').innerText = missingImages.length;
+            document.getElementById('stat-extra-img').innerText = extraImages.length;
+
+            const listMissing = document.getElementById('list-missing-images');
+            listMissing.innerHTML = missingImages.length === 0 
+                ? '<li class="text-green-400 list-none">✅ كل ألعابك لها صور!</li>' 
+                : missingImages.map(g => `<li>${g.originalName} <span class="text-gray-500 text-[10px]">(${g.drive})</span></li>`).join('');
+
+            const listExtra = document.getElementById('list-extra-images');
+            listExtra.innerHTML = extraImages.length === 0 
+                ? '<li class="text-green-400 list-none">✅ لا توجد صور زائدة</li>' 
+                : extraImages.map(img => `<li>${img.originalName}</li>`).join('');
+
+            document.getElementById('report-modal').classList.remove('hidden');
+            document.getElementById('report-modal').classList.add('flex');
+            
+            // تصفير الادخال عشان نقدر نختار نفس الفولدر تاني لو عدلنا حاجة
+            inputElement.value = ''; 
         };
 
         init();

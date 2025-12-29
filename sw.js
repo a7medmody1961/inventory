@@ -1,4 +1,4 @@
-const CACHE_NAME = 'game-library-v6';
+const CACHE_NAME = 'game-library-v7';
 const ASSETS = [
   '/',
   '/index.html',
@@ -14,4 +14,5 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('fetch', (e) => {
   e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+
 });

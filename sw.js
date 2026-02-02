@@ -1,4 +1,4 @@
-const CACHE_NAME = 'game-library-v7';
+const CACHE_NAME = 'game-library-v8';
 const ASSETS = [
   '/',
   '/index.html',
@@ -13,8 +13,7 @@ self.addEventListener('install', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  e.respondWith(
-    // استراتيجية: حاول جلب الملف من الإنترنت أولاً، إذا فشل (أوفلاين) هاته من الـ Cache
-    fetch(e.request).catch(() => caches.match(e.request))
-  );
+  e.respondWith(caches.match(e.request).then(r => r || fetch(e.request)));
+
 });
+

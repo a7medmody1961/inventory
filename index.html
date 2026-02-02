@@ -189,8 +189,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        // تم إضافة enableIndexedDbPersistence هنا
-        import { getFirestore, doc, onSnapshot, setDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // تحديث: استيراد initializeFirestore بدلاً من getFirestore للتحكم في الكاش الجديد
+        import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAwANOKW2MMg8tTtdy1Y4_WVpYwJFcawzU",
@@ -211,12 +211,13 @@
         let editingGameRef = null;
         let isFirstLoad = true;
 
-        // تسجيل الـ Service Worker
+        // --- تصحيح مسار Service Worker (الحل للمشكلة) ---
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                .then(reg => console.log('SW Registered!', reg))
-                .catch(err => console.log('SW Failed', err));
+                // استخدام ./sw.js بدلاً من /sw.js لضمان عمله في أي مجلد فرعي
+                navigator.serviceWorker.register('./sw.js')
+                .then(reg => console.log('SW Registered! Scope:', reg.scope))
+                .catch(err => console.error('SW Registration Failed:', err));
             });
         }
 
@@ -237,33 +238,25 @@
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
-                db = getFirestore(app);
-
-                // --- تفعيل الأوفلاين (أهم خطوة) ---
-                try {
-                    await enableIndexedDbPersistence(db);
-                    console.log("Offline persistence enabled!");
-                } catch (err) {
-                    if (err.code == 'failed-precondition') {
-                        console.log('Multiple tabs open, persistence can only be enabled in one tab at a a time.');
-                    } else if (err.code == 'unimplemented') {
-                        console.log('The current browser does not support all of the features required to enable persistence');
-                    }
-                }
-                // ------------------------------------
+                
+                // --- الكود الجديد لتفعيل الأوفلاين (بدون تحذيرات) ---
+                db = initializeFirestore(app, {
+                    localCache: persistentLocalCache({
+                        tabManager: persistentMultipleTabManager()
+                    })
+                });
+                console.log("Offline persistence enabled (New API)!");
+                // ----------------------------------------------------
 
                 updateOnlineStatus();
 
-                // محاولة تسجيل الدخول فقط إذا كان متصلاً، أو الاعتماد على الكاش
                 onAuthStateChanged(auth, (u) => {
                     if (u) {
                         user = u;
                         loadData();
                     } else {
-                        // محاولة الدخول إذا لم يكن مسجلاً
                         signInAnonymously(auth).catch(e => {
                             console.log("Auth failed (likely offline):", e);
-                            // حتى لو فشل الدخول بسبب النت، نحاول تحميل البيانات
                             loadData(); 
                         });
                     }
@@ -271,37 +264,41 @@
 
             } catch (e) {
                 console.error("Initialization Error:", e);
-                // في حالة فشل تحميل Firebase بالكامل (نادر مع الـ Service Worker)
-                document.getElementById('auth-status').innerText = "خطأ في تحميل النظام - تأكد من تشغيل التطبيق مرة واحدة مع الإنترنت";
+                // رسالة واضحة في حال فشل كل شيء
+                if (!navigator.onLine) {
+                    document.getElementById('auth-status').innerText = "أنت أوفلاين - إذا لم تظهر البيانات، يرجى الاتصال بالنت مرة واحدة لتحديث النظام";
+                }
             }
         };
 
         const loadData = () => {
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', 'main');
             
-            // onSnapshot تعمل أوفلاين تلقائياً بفضل enableIndexedDbPersistence
             onSnapshot(docRef, { includeMetadataChanges: true }, (docSnap) => {
+                // التحقق مما إذا كانت البيانات من الكاش أو السيرفر
+                const source = docSnap.metadata.fromCache ? "Local Cache" : "Server";
+                console.log("Data loaded from " + source);
+
                 if (docSnap.exists()) {
                     inventory = docSnap.data().drives || [];
                     isFirstLoad = false;
-                    
-                    const source = docSnap.metadata.fromCache ? "Local Cache" : "Server";
-                    console.log("Data loaded from " + source);
-                    
                     if (!currentDriveName && inventory.length > 0) currentDriveName = inventory[0].name;
                     renderUI();
                 } else if (isFirstLoad) {
-                    // إذا لم تكن هناك بيانات (أول مرة أونلاين)
                     seedInitialData();
                 }
             }, (error) => {
                 console.error("Error fetching data:", error);
-                document.getElementById('auth-status').innerText = "تعذر تحميل البيانات";
+                // التعامل مع أخطاء الأوفلاين المتوقعة
+                if (error.code === 'unavailable') {
+                    console.log("Network unavailable, waiting for cache...");
+                }
             });
         };
 
+        // ... (باقي الكود كما هو تماماً دون تغيير) ...
         const seedInitialData = async () => {
-            if (!navigator.onLine) return; // لا تحاول الإنشاء إذا كنا أوفلاين
+            if (!navigator.onLine) return; 
             inventory = [
                 { name: 'Toshiba', total: '1TB', free: '20GB', games: [ { name: 'Call of Duty Black Ops 3', size: 70 }, { name: 'GTA V', size: 69 } ] }
             ];
@@ -311,19 +308,19 @@
         };
 
         const saveToCloud = async () => {
-            // التعديل يعمل أوفلاين وسيتم مزامنته لاحقاً
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', 'main');
             try {
                 await setDoc(docRef, { drives: inventory });
                 console.log("Saved (or queued for sync)");
             } catch (e) {
                 console.error("Error saving:", e);
-                alert("حدث خطأ أثناء الحفظ");
             }
         };
-
-        // --- باقي دوال الواجهة (UI Functions) كما هي ---
         
+        // (انسخ باقي الدوال: formatSize, renderUI, etc... كما هي من الملف السابق)
+        // ...
+        
+        // تأكد من وضع باقي الدوال هنا
         const formatSize = (size) => {
             if (size < 1) return `${(size * 1024).toFixed(0)} MB`;
             return `${size} GB`;

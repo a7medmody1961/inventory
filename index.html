@@ -7,9 +7,11 @@
     <link rel="manifest" href="manifest.json">
     <link rel="icon" href="data:;base64,iVBORw0KGgo=">
     <meta name="theme-color" content="#0f172a">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    
     <style>
         body {
             font-family: 'Cairo', sans-serif;
@@ -32,20 +34,32 @@
         .animate-pop { animation: pop 0.2s ease-out; }
         @keyframes pop { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         .no-scrollbar::-webkit-scrollbar { display: none; }
-        
-        /* تنسيق خاص لتقرير الصور */
         .report-list::-webkit-scrollbar { width: 4px; }
         .report-list::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        
+        /* مؤشر حالة الاتصال */
+        .offline-badge {
+            display: none;
+            background: #ef4444;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 99px;
+            font-size: 10px;
+            margin-right: 8px;
+        }
+        body.is-offline .offline-badge { display: inline-block; }
     </style>
 </head>
 <body class="safe-area-pb">
 
-    <!-- Header -->
     <header class="p-6 pb-2">
         <div class="flex justify-between items-center mb-4">
             <div>
-                <h1 class="text-2xl font-800 text-blue-400">مكتبتي السحابية</h1>
-                <p id="auth-status" class="text-[10px] text-gray-500 italic">جاري الاتصال بالسحابة...</p>
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-800 text-blue-400">مكتبتي السحابية</h1>
+                    <span class="offline-badge">وضع الأوفلاين</span>
+                </div>
+                <p id="auth-status" class="text-[10px] text-gray-500 italic">جاري تهيئة النظام...</p>
             </div>
             <div class="flex gap-2">
                 <button onclick="toggleEditMode()" id="edit-toggle-btn" class="p-2 rounded-xl glass text-gray-400 transition-colors">
@@ -54,7 +68,6 @@
             </div>
         </div>
 
-        <!-- Global Search & Sorting -->
         <div class="flex gap-2 mb-4">
             <div class="relative flex-1">
                 <input type="text" id="global-search" placeholder="ابحث عن لعبة..." 
@@ -74,33 +87,20 @@
             </div>
         </div>
 
-        <!-- Drives Tabs -->
         <div id="drive-tabs" class="flex gap-2 overflow-x-auto pb-2 no-scrollbar whitespace-nowrap">
-            <!-- Tabs injected here -->
-        </div>
+            </div>
     </header>
 
-    <!-- Drive Info Header -->
-    <div id="drive-info-box" class="px-6 mb-4">
-        <!-- Stats for selected drive -->
-    </div>
+    <div id="drive-info-box" class="px-6 mb-4"></div>
 
-    <!-- Main Content -->
-    <main id="content-list" class="px-6 space-y-3">
-        <!-- Cards injected here -->
-    </main>
+    <main id="content-list" class="px-6 space-y-3"></main>
 
-    <!-- Floating Actions (Edit Mode) -->
     <div id="edit-actions" class="fixed bottom-24 left-6 flex flex-col gap-3 hidden z-40">
-        
-        <!-- زر فحص الصور الجديد -->
         <button onclick="document.getElementById('folder-input').click()" class="w-12 h-12 bg-purple-600 rounded-full shadow-lg flex items-center justify-center hover:bg-purple-500 transition animate-pop" title="فحص صور الألعاب">
             <i data-lucide="image" class="text-white w-5 h-5"></i>
         </button>
-        <!-- Input خاص لاختيار فولدر كامل -->
         <input type="file" id="folder-input" class="hidden" webkitdirectory directory multiple onchange="analyzeImages(this)">
 
-        <!-- أزرار الإكسيل -->
         <div class="flex gap-2 animate-pop">
             <button onclick="exportToExcel()" class="w-12 h-12 bg-green-600 rounded-full shadow-lg flex items-center justify-center hover:bg-green-500 transition" title="تصدير لملف Excel">
                 <i data-lucide="download" class="text-white w-5 h-5"></i>
@@ -111,7 +111,6 @@
             <input type="file" id="import-excel-input" class="hidden" accept=".csv, .txt" onchange="importFromExcel(this)">
         </div>
 
-        <!-- الأزرار الأصلية -->
         <button onclick="openDriveModal()" class="w-12 h-12 bg-indigo-600 rounded-full shadow-lg flex items-center justify-center">
             <i data-lucide="database" class="text-white w-6 h-6"></i>
         </button>
@@ -120,16 +119,13 @@
         </button>
     </div>
 
-    <!-- Modals (Add/Edit Game) -->
     <div id="game-modal" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
         <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop text-right" dir="rtl">
             <h2 id="game-modal-title" class="text-xl font-bold mb-4 text-white">إضافة/تعديل لعبة</h2>
             <div class="space-y-4">
                 <input type="text" id="input-game-name" placeholder="اسم اللعبة" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
                 <input type="number" step="0.01" id="input-game-size" placeholder="المساحة (GB)" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
-                <select id="input-game-drive" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white">
-                    <!-- Options -->
-                </select>
+                <select id="input-game-drive" class="w-full p-3 rounded-xl bg-slate-800 border border-slate-700 text-white"></select>
                 <div class="flex gap-2 pt-2">
                     <button onclick="saveGame()" class="flex-1 bg-blue-600 py-3 rounded-xl font-bold text-white">حفظ</button>
                     <button onclick="closeModals()" class="flex-1 bg-slate-700 py-3 rounded-xl font-bold text-gray-300">إلغاء</button>
@@ -138,7 +134,6 @@
         </div>
     </div>
 
-    <!-- Drive Modal -->
     <div id="drive-modal" class="fixed inset-0 bg-black/90 z-[100] hidden items-center justify-center p-6 backdrop-blur-sm">
         <div class="glass w-full max-w-sm p-6 rounded-3xl animate-pop text-right" dir="rtl">
             <h2 id="drive-modal-title" class="text-xl font-bold mb-4 text-white">إعدادات الهارد</h2>
@@ -155,7 +150,6 @@
         </div>
     </div>
 
-    <!-- Report Modal (نتيجة فحص الصور) -->
     <div id="report-modal" class="fixed inset-0 bg-black/95 z-[150] hidden items-center justify-center p-4 backdrop-blur-sm">
         <div class="glass w-full max-w-lg h-[80vh] flex flex-col p-6 rounded-3xl animate-pop text-right" dir="rtl">
             <div class="flex justify-between items-center mb-4 border-b border-gray-700 pb-2">
@@ -179,7 +173,6 @@
             </div>
 
             <div class="flex-1 overflow-y-auto report-list space-y-4">
-                
                 <div id="missing-images-section">
                     <h3 class="text-red-400 font-bold mb-2 flex items-center gap-2"><i data-lucide="image-off" class="w-4 h-4"></i> ألعاب تحتاج لصور</h3>
                     <ul id="list-missing-images" class="text-sm space-y-1 text-gray-300 list-disc pr-4"></ul>
@@ -189,11 +182,6 @@
                     <h3 class="text-yellow-400 font-bold mb-2 flex items-center gap-2"><i data-lucide="file-warning" class="w-4 h-4"></i> صور ليس لها ألعاب (زيادة)</h3>
                     <ul id="list-extra-images" class="text-sm space-y-1 text-gray-300 list-disc pr-4"></ul>
                 </div>
-
-            </div>
-            
-            <div class="mt-4 pt-2 text-center text-[10px] text-gray-500">
-                * المطابقة تتجاهل الحروف الكبيرة والرموز (مثلاً: God-of-War = God of War)
             </div>
         </div>
     </div>
@@ -201,7 +189,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // تم إضافة enableIndexedDbPersistence هنا
+        import { getFirestore, doc, onSnapshot, setDoc, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyAwANOKW2MMg8tTtdy1Y4_WVpYwJFcawzU",
@@ -222,35 +211,97 @@
         let editingGameRef = null;
         let isFirstLoad = true;
 
-        const init = async () => {
-            const app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            await signInAnonymously(auth);
-            onAuthStateChanged(auth, (u) => {
-                if (u) {
-                    user = u;
-                    document.getElementById('auth-status').innerText = "متصل بالسحابة ✅";
-                    loadData();
-                }
+        // تسجيل الـ Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('SW Registered!', reg))
+                .catch(err => console.log('SW Failed', err));
             });
+        }
+
+        // مراقبة حالة الاتصال بالإنترنت
+        const updateOnlineStatus = () => {
+            if (navigator.onLine) {
+                document.body.classList.remove('is-offline');
+                document.getElementById('auth-status').innerText = "متصل بالسحابة (Online) ✅";
+            } else {
+                document.body.classList.add('is-offline');
+                document.getElementById('auth-status').innerText = "وضع عدم الاتصال (Offline) ⚠️";
+            }
+        };
+        window.addEventListener('online', updateOnlineStatus);
+        window.addEventListener('offline', updateOnlineStatus);
+
+        const init = async () => {
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // --- تفعيل الأوفلاين (أهم خطوة) ---
+                try {
+                    await enableIndexedDbPersistence(db);
+                    console.log("Offline persistence enabled!");
+                } catch (err) {
+                    if (err.code == 'failed-precondition') {
+                        console.log('Multiple tabs open, persistence can only be enabled in one tab at a a time.');
+                    } else if (err.code == 'unimplemented') {
+                        console.log('The current browser does not support all of the features required to enable persistence');
+                    }
+                }
+                // ------------------------------------
+
+                updateOnlineStatus();
+
+                // محاولة تسجيل الدخول فقط إذا كان متصلاً، أو الاعتماد على الكاش
+                onAuthStateChanged(auth, (u) => {
+                    if (u) {
+                        user = u;
+                        loadData();
+                    } else {
+                        // محاولة الدخول إذا لم يكن مسجلاً
+                        signInAnonymously(auth).catch(e => {
+                            console.log("Auth failed (likely offline):", e);
+                            // حتى لو فشل الدخول بسبب النت، نحاول تحميل البيانات
+                            loadData(); 
+                        });
+                    }
+                });
+
+            } catch (e) {
+                console.error("Initialization Error:", e);
+                // في حالة فشل تحميل Firebase بالكامل (نادر مع الـ Service Worker)
+                document.getElementById('auth-status').innerText = "خطأ في تحميل النظام - تأكد من تشغيل التطبيق مرة واحدة مع الإنترنت";
+            }
         };
 
         const loadData = () => {
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', 'main');
-            onSnapshot(docRef, (docSnap) => {
+            
+            // onSnapshot تعمل أوفلاين تلقائياً بفضل enableIndexedDbPersistence
+            onSnapshot(docRef, { includeMetadataChanges: true }, (docSnap) => {
                 if (docSnap.exists()) {
                     inventory = docSnap.data().drives || [];
                     isFirstLoad = false;
+                    
+                    const source = docSnap.metadata.fromCache ? "Local Cache" : "Server";
+                    console.log("Data loaded from " + source);
+                    
                     if (!currentDriveName && inventory.length > 0) currentDriveName = inventory[0].name;
                     renderUI();
                 } else if (isFirstLoad) {
+                    // إذا لم تكن هناك بيانات (أول مرة أونلاين)
                     seedInitialData();
                 }
+            }, (error) => {
+                console.error("Error fetching data:", error);
+                document.getElementById('auth-status').innerText = "تعذر تحميل البيانات";
             });
         };
 
         const seedInitialData = async () => {
+            if (!navigator.onLine) return; // لا تحاول الإنشاء إذا كنا أوفلاين
             inventory = [
                 { name: 'Toshiba', total: '1TB', free: '20GB', games: [ { name: 'Call of Duty Black Ops 3', size: 70 }, { name: 'GTA V', size: 69 } ] }
             ];
@@ -260,20 +311,25 @@
         };
 
         const saveToCloud = async () => {
-            if (!user) return;
+            // التعديل يعمل أوفلاين وسيتم مزامنته لاحقاً
             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'inventory', 'main');
-            await setDoc(docRef, { drives: inventory });
+            try {
+                await setDoc(docRef, { drives: inventory });
+                console.log("Saved (or queued for sync)");
+            } catch (e) {
+                console.error("Error saving:", e);
+                alert("حدث خطأ أثناء الحفظ");
+            }
         };
 
+        // --- باقي دوال الواجهة (UI Functions) كما هي ---
+        
         const formatSize = (size) => {
             if (size < 1) return `${(size * 1024).toFixed(0)} MB`;
             return `${size} GB`;
         };
 
-        window.changeSort = (val) => {
-            currentSort = val;
-            renderUI();
-        };
+        window.changeSort = (val) => { currentSort = val; renderUI(); };
 
         window.renderUI = () => {
             const tabsContainer = document.getElementById('drive-tabs');
@@ -281,13 +337,20 @@
             const infoBox = document.getElementById('drive-info-box');
             const driveSelect = document.getElementById('input-game-drive');
 
+            if (!inventory || inventory.length === 0) {
+                listContainer.innerHTML = '<div class="text-center text-gray-500 mt-10">لا توجد بيانات..</div>';
+                return;
+            }
+
             tabsContainer.innerHTML = inventory.map(d => `
                 <button onclick="setDrive('${d.name}')" class="px-5 py-2 rounded-xl glass text-sm font-bold ${currentDriveName === d.name ? 'drive-tab-active' : ''}">
                     ${d.name}
                 </button>
             `).join('');
 
-            const currentDrive = inventory.find(d => d.name === currentDriveName);
+            const currentDrive = inventory.find(d => d.name === currentDriveName) || inventory[0];
+            if (currentDriveName === '' && currentDrive) currentDriveName = currentDrive.name;
+
             if (currentDrive) {
                 infoBox.innerHTML = `
                     <div class="glass p-4 rounded-2xl border-l-4 border-blue-500 flex justify-between items-end">
@@ -317,15 +380,11 @@
                 });
             });
 
-            // تطبيق الفرز
+            // Sorting
             gamesToShow.sort((a, b) => {
-                if (currentSort === 'alpha') {
-                    return a.name.localeCompare(b.name);
-                } else if (currentSort === 'size-asc') {
-                    return a.size - b.size;
-                } else if (currentSort === 'size-desc') {
-                    return b.size - a.size;
-                }
+                if (currentSort === 'alpha') return a.name.localeCompare(b.name);
+                else if (currentSort === 'size-asc') return a.size - b.size;
+                else if (currentSort === 'size-desc') return b.size - a.size;
                 return 0;
             });
 
@@ -347,7 +406,7 @@
                 </div>
             `).join('');
             
-            lucide.createIcons();
+            if (window.lucide) lucide.createIcons();
             driveSelect.innerHTML = inventory.map(d => `<option value="${d.name}">${d.name}</option>`).join('');
         };
 
@@ -449,16 +508,12 @@
             }
         };
 
-        // --- وظائف التصدير والاستيراد (Excel/CSV) ---
-
         window.exportToExcel = () => {
             if (!inventory || inventory.length === 0) {
                 alert("لا توجد بيانات لتصديرها!");
                 return;
             }
-
             let csvContent = "\uFEFFاسم الهارد,المساحة الكلية للهارد,المساحة المتبقية للهارد,اسم اللعبة,مساحة اللعبة (GB)\n";
-
             inventory.forEach(drive => {
                 if (drive.games.length === 0) {
                     csvContent += `"${drive.name}","${drive.total}","${drive.free}","",""\n`;
@@ -468,7 +523,6 @@
                     });
                 }
             });
-
             const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -484,158 +538,93 @@
         window.importFromExcel = (inputElement) => {
             const file = inputElement.files[0];
             if (!file) return;
-
             if (!confirm("تحذير: استيراد ملف سيقوم بمسح البيانات الحالية واستبدالها بالملف الجديد. هل أنت متأكد؟")) {
                 inputElement.value = '';
                 return;
             }
-
             const reader = new FileReader();
             reader.onload = async (e) => {
                 try {
                     const text = e.target.result;
                     const lines = text.split('\n');
-                    if (lines.length < 2) {
-                        alert("الملف فارغ أو غير صالح.");
-                        return;
-                    }
-
+                    if (lines.length < 2) { alert("الملف فارغ أو غير صالح."); return; }
                     const tempInventoryMap = {};
                     for (let i = 1; i < lines.length; i++) {
                         const line = lines[i].trim();
                         if (!line) continue;
-
                         const cols = line.match(/(?:\"([^\"]*)\")|([^,]+)/g);
                         if (!cols) continue;
                         const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
-
                         const driveName = cleanCols[0];
                         const driveTotal = cleanCols[1] || "";
                         const driveFree = cleanCols[2] || "";
                         const gameName = cleanCols[3];
                         const gameSize = parseFloat(cleanCols[4]);
-
                         if (!driveName) continue;
-
                         if (!tempInventoryMap[driveName]) {
-                            tempInventoryMap[driveName] = {
-                                name: driveName,
-                                total: driveTotal,
-                                free: driveFree,
-                                games: []
-                            };
+                            tempInventoryMap[driveName] = { name: driveName, total: driveTotal, free: driveFree, games: [] };
                         }
-
                         if (gameName && !isNaN(gameSize)) {
-                            tempInventoryMap[driveName].games.push({
-                                name: gameName,
-                                size: gameSize
-                            });
+                            tempInventoryMap[driveName].games.push({ name: gameName, size: gameSize });
                         }
                     }
-
                     const newInventory = Object.values(tempInventoryMap);
-
                     if (newInventory.length > 0) {
                         inventory = newInventory;
                         await saveToCloud();
                         alert("تم استيراد البيانات بنجاح!");
                         window.location.reload();
-                    } else {
-                        alert("لم يتم العثور على بيانات صالحة في الملف.");
-                    }
-
-                } catch (error) {
-                    console.error(error);
-                    alert("حدث خطأ أثناء قراءة الملف. تأكد أنه ملف CSV صحيح.");
-                }
+                    } else { alert("لم يتم العثور على بيانات صالحة في الملف."); }
+                } catch (error) { console.error(error); alert("حدث خطأ أثناء قراءة الملف."); }
                 inputElement.value = '';
             };
             reader.readAsText(file);
         };
 
-        // --- وظيفة فحص الصور (New Logic) ---
-        
-        // دالة لتوحيد النصوص للمقارنة (تجاهل الرموز والمسافات الزائدة)
         const normalize = (str) => {
-            return str.toLowerCase()
-                      .replace(/['":\-\.]/g, '') // حذف الرموز
-                      .replace(/\s+/g, ' ')      // توحيد المسافات
-                      .trim();
+            return str.toLowerCase().replace(/['":\-\.]/g, '').replace(/\s+/g, ' ').trim();
         };
 
         window.analyzeImages = (inputElement) => {
             const files = Array.from(inputElement.files);
-            
             if (files.length === 0) return;
-
-            // 1. تجميع كل ألعاب المكتبة
             const allLibraryGames = [];
             inventory.forEach(drive => {
                 drive.games.forEach(game => {
-                    allLibraryGames.push({ 
-                        originalName: game.name, 
-                        normName: normalize(game.name),
-                        drive: drive.name 
-                    });
+                    allLibraryGames.push({ originalName: game.name, normName: normalize(game.name), drive: drive.name });
                 });
             });
-
-            // 2. تجميع كل صور الفولدر (مع تجاهل الامتدادات)
             const allImages = [];
             files.forEach(file => {
-                // التأكد انه ملف صورة
                 if (file.type.startsWith('image/') || file.name.match(/\.(jpg|jpeg|png|webp)$/i)) {
                     const nameWithoutExt = file.name.substring(0, file.name.lastIndexOf('.')) || file.name;
-                    allImages.push({
-                        originalName: file.name,
-                        normName: normalize(nameWithoutExt)
-                    });
+                    allImages.push({ originalName: file.name, normName: normalize(nameWithoutExt) });
                 }
             });
-
-            // 3. المقارنة
             let matchedCount = 0;
-            const missingImages = []; // ألعاب في المكتبة ملهاش صور
-            const extraImages = [];   // صور في الفولدر ملهاش ألعاب
-
-            // البحث عن الصور المفقودة
+            const missingImages = [];
+            const extraImages = [];
             allLibraryGames.forEach(game => {
                 const found = allImages.some(img => img.normName === game.normName);
-                if (found) {
-                    matchedCount++;
-                } else {
-                    missingImages.push(game);
-                }
+                if (found) matchedCount++; else missingImages.push(game);
             });
-
-            // البحث عن الصور الزائدة
             allImages.forEach(img => {
                 const found = allLibraryGames.some(game => game.normName === img.normName);
-                if (!found) {
-                    extraImages.push(img);
-                }
+                if (!found) extraImages.push(img);
             });
-
-            // 4. عرض التقرير
             document.getElementById('stat-matched').innerText = matchedCount;
             document.getElementById('stat-missing-img').innerText = missingImages.length;
             document.getElementById('stat-extra-img').innerText = extraImages.length;
-
             const listMissing = document.getElementById('list-missing-images');
             listMissing.innerHTML = missingImages.length === 0 
                 ? '<li class="text-green-400 list-none">✅ كل ألعابك لها صور!</li>' 
                 : missingImages.map(g => `<li>${g.originalName} <span class="text-gray-500 text-[10px]">(${g.drive})</span></li>`).join('');
-
             const listExtra = document.getElementById('list-extra-images');
             listExtra.innerHTML = extraImages.length === 0 
                 ? '<li class="text-green-400 list-none">✅ لا توجد صور زائدة</li>' 
                 : extraImages.map(img => `<li>${img.originalName}</li>`).join('');
-
             document.getElementById('report-modal').classList.remove('hidden');
             document.getElementById('report-modal').classList.add('flex');
-            
-            // تصفير الادخال عشان نقدر نختار نفس الفولدر تاني لو عدلنا حاجة
             inputElement.value = ''; 
         };
 
